@@ -215,11 +215,13 @@ def detect_auth_mode(env: dict[str, str], force_prompt: bool = False) -> str:
     if force_prompt:
         print("\n  🤖 Select your Intelligence Backend:")
         print("     1. 🔑 Google AI Studio (Free Tier, 2 request/min limits on Pro)")
-        print("     2. 🔐 Google Vertex AI (Enterprise, requires Cloud Billing)")
+        print("     2. 🔑 Google AI Studio (Paid Tier, High Limits)")
+        print("     3. 🔐 Google Vertex AI (Enterprise, requires Cloud Billing)")
         print()
-        choice = input("  → Enter choice (1 or 2, default=1): ").strip()
+        choice = input("  → Enter choice (1, 2, or 3, default=1): ").strip()
         
-        use_vertex = (choice == "2")
+        use_vertex = (choice == "3")
+        is_paid_api = (choice == "2")
         
         # Update .env
         env_content = ""
@@ -238,10 +240,18 @@ def detect_auth_mode(env: dict[str, str], force_prompt: bool = False) -> str:
         else:
             env_content += f"\nGOOGLE_GENAI_USE_VERTEXAI={'TRUE' if use_vertex else 'FALSE'}\n"
             
-        with open(env_file, "w", encoding="utf-8") as f:
-            f.write(env_content)
+        if "GOOGLE_GENAI_PAID_API_KEY" in env_content:
+            import re
+            env_content = re.sub(
+                r"^GOOGLE_GENAI_PAID_API_KEY=.*$",
+                f"GOOGLE_GENAI_PAID_API_KEY={'TRUE' if is_paid_api else 'FALSE'}",
+                env_content,
+                flags=re.MULTILINE
+            )
+        else:
+            env_content += f"\nGOOGLE_GENAI_PAID_API_KEY={'TRUE' if is_paid_api else 'FALSE'}\n"
             
-        print(f"  ✅ Configured for {'Vertex AI' if use_vertex else 'AI Studio'}.")
+        print(f"  ✅ Configured for {'Vertex AI' if use_vertex else ('AI Studio Paid' if is_paid_api else 'AI Studio Free')}.")
         # Reload env
         env = load_env()
         
@@ -271,17 +281,22 @@ def detect_auth_mode(env: dict[str, str], force_prompt: bool = False) -> str:
     else:
         api_key = env.get("GOOGLE_API_KEY", "")
 
+        is_paid = env.get("GOOGLE_GENAI_PAID_API_KEY", "FALSE").upper() == "TRUE"
+
         print()
-        print("  🔑 Mode: AI Studio (API Key)")
+        if is_paid:
+            print("  🔑 Mode: AI Studio (Paid Tier - High Limits)")
+        else:
+            print("  🔑 Mode: AI Studio (Free Tier - 2 RPM Limit on Pro)")
 
         if not api_key or api_key == "YOUR_API_KEY_HERE":
             logger.error("❌ GOOGLE_API_KEY not set or is placeholder.")
-            logger.error("   Get a free key here: https://aistudio.google.com/apikey")
+            logger.error("   Get a key here: https://aistudio.google.com/apikey")
             logger.error("   Update your .env file with GOOGLE_API_KEY=your_key")
             sys.exit(1)
 
         print("     Key:      ✅ configured")
-        return "free"
+        return "paid" if is_paid else "free"
 
 
 def ensure_venv():

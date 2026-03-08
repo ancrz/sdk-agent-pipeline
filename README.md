@@ -76,38 +76,46 @@ sequenceDiagram
 
 ---
 
-## Two Authentication Modes
+## Three Authentication Modes
 
 ```mermaid
 flowchart LR
     subgraph FREE["🔑 AI Studio (Free Tier)"]
-        K["API Key"] --> ADK1["ADK Web"]
+        K1["API Key (Free)"] --> ADK1["ADK Web"]
     end
-    subgraph VERTEX["🔐 Vertex AI (Pay-per-use)"]
-        G["gcloud OAuth"] --> ADK2["ADK Web"]
+    subgraph PAID["💎 AI Studio (Paid Tier)"]
+        K2["API Key (Paid)"] --> ADK2["ADK Web"]
+    end
+    subgraph VERTEX["🔐 Vertex AI (Enterprise)"]
+        G["gcloud OAuth"] --> ADK3["ADK Web"]
     end
 
     ADK1 --> M1["gemini-2.0-flash ⚡ (15 RPM)"]
     ADK1 --> M2["gemini-2.5-pro 🔒 (2 RPM)"]
-    ADK2 --> M3["gemini-2.0-flash ⚡ (Unlimited)"]
-    ADK2 --> M4["gemini-2.5-pro ♾️ (Unlimited)"]
+    
+    ADK2 --> M5["gemini-2.0-flash ⚡ (Unlimited)"]
+    ADK2 --> M6["gemini-2.5-pro ♾️ (Unlimited)"]
+
+    ADK3 --> M3["gemini-2.0-flash ⚡ (Unlimited)"]
+    ADK3 --> M4["gemini-2.5-pro ♾️ (Unlimited)"]
 
     style FREE fill:#E8F5E9,stroke:#4CAF50
+    style PAID fill:#FFF3E0,stroke:#FF9800
     style VERTEX fill:#E3F2FD,stroke:#2196F3
 ```
 
-| Feature | 🔑 AI Studio | 🔐 Vertex AI |
-|---|---|---|
-| Auth method | API Key (static) | OAuth (auto-refresh) |
-| Cost | **Free** with rate limits | Pay-per-token |
-| `gemini-2.5-pro` limit | 2 RPM (throttled) | **Unlimited** |
-| `gemini-2.0-flash` limit | 15 RPM (throttled) | **Unlimited** |
-| Setup time | 2 min | 10 min |
-| Requires billing | No | Yes |
-| How to tell | `start.sh` prints `🔑 Mode: AI Studio` | `start.sh` prints `🔐 Mode: Vertex AI` |
+| Feature | 🔑 AI Studio (Free) | 💎 AI Studio (Paid) | 🔐 Vertex AI |
+|---|---|---|---|
+| Auth method | API Key | API Key | OAuth (auto-refresh) |
+| Cost | **Free** with rate limits | Pay-per-token | Pay-per-token |
+| `gemini-2.5-pro` limit | 2 RPM (throttled) | **Unlimited** | **Unlimited** |
+| `gemini-2.0-flash` limit | 15 RPM (throttled) | **Unlimited** | **Unlimited** |
+| Setup time | 2 min | 2 min | 10 min |
+| Requires billing | No | Yes | Yes |
+| How to tell | `start.local.py` prints `🔑 Mode: AI Studio (Free Tier...)` | `start.local.py` prints `🔑 Mode: AI Studio (Paid Tier...)` | `start.local.py` prints `🔐 Mode: Vertex AI` |
 
-> **🤖 Smart Rate Limiter in AI Studio Mode**
-> To prevent `429 RESOURCE_EXHAUSTED` errors when using the Free Tier, the ADK Pipeline automatically activates a Smart Rate Limiter. It dynamically delays execution based on the chosen model (`pro` vs `flash`) inside your `.env` configuration. If you switch to Vertex AI, the rate limiter is fully bypassed.
+> **🤖 Smart Rate Limiter for Free Tier**
+> To prevent `429 RESOURCE_EXHAUSTED` errors when using the Free Tier, the ADK Pipeline automatically activates a Smart Rate Limiter. It dynamically delays execution based on the chosen model (`pro` vs `flash`) inside your `.env` configuration. If you switch to the Paid Tier or Vertex AI, the rate limiter is fully bypassed.
 
 ---
 
@@ -135,36 +143,39 @@ cp .env.example .env
 
 Edit `.env` and choose **one** mode:
 
-#### Option A: AI Studio (quick & free)
+#### Option A: AI Studio (Free Tier)
 
 1. Get API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
 2. Set in `.env`:
 
 ```env
 GOOGLE_GENAI_USE_VERTEXAI=FALSE
+GOOGLE_GENAI_PAID_API_KEY=FALSE
 GOOGLE_API_KEY=your-key-here
 ```
 
-#### Option B: Vertex AI (production, no rate limits)
+#### Option B: AI Studio (Paid Tier)
 
-**Prerequisites** (one-time):
+For faster prototyping without setting up Vertex AI, but still bypassing rate limits.
 
-> ⚠️ **Important: Cloud Billing Required**
-> Vertex AI requires an active Google Cloud Billing account linked to your project. Even if you stay within the free tier limits, the API will return a `403 PERMISSION_DENIED` (Billing Disabled) error if a credit card is not on file in the Google Cloud Console.
+1. Get API key from a billing-enabled project at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+2. Set in `.env`:
 
-```bash
-# 1. Enable Vertex AI API in your GCP project
-gcloud services enable aiplatform.googleapis.com --project=YOUR_PROJECT_ID
+```env
+GOOGLE_GENAI_USE_VERTEXAI=FALSE
+GOOGLE_GENAI_PAID_API_KEY=TRUE
+GOOGLE_API_KEY=your-paid-key-here
 ```
 
-#### Option B: Vertex AI (Recommended, Requires Google Cloud)
+#### Option C: Vertex AI (Recommended, Requires Google Cloud)
+
 For production use or heavy reasoning beyond the free tier limits.
 
 We provide an interactive script that automatically handles gcloud installation, project creation, billing verification, API enablement, and `.env` configuration.
 
 ```bash
 # Run the interactive setup script
-python3.14 setup_gcp.py
+python3 setup_gcp.py
 ```
 
 The script will guide you through:
@@ -182,22 +193,22 @@ _Note: The script pauses at each step to explain what Google will ask you to acc
 
 ```bash
 # Start (any OS — Python handles platform differences)
-python3.14 start.local.py
+python3 start.local.py
 
 # Start on a different port
-python3.14 start.local.py --port 8889
+python3 start.local.py --port 8889
 
 # Force restart if already running
-python3.14 start.local.py --force
+python3 start.local.py --force
 
 # Interactively switch between AI Studio and Vertex AI modes
-python3.14 start.local.py --mode
+python3 start.local.py --mode
 
 # Stop
-python3.14 stop.local.py
+python3 stop.local.py
 
 # Force stop (SIGKILL)
-python3.14 stop.local.py --force
+python3 stop.local.py --force
 ```
 
 Open **http://localhost:8888** → select **`topos_pipeline`** → chat.
@@ -217,10 +228,10 @@ Open **http://localhost:8888** → select **`topos_pipeline`** → chat.
 
 ## Switching Modes
 
-You can switch between the free AI Studio and the enterprise Vertex AI at any time using the interactive prompt:
+You can switch between the free AI Studio, paid AI Studio, and enterprise Vertex AI at any time using the interactive prompt:
 
 ```bash
-python3.14 start.local.py --mode
+python3 start.local.py --mode
 ```
 
 Alternatively, edit `.env` manually → restart.
@@ -228,9 +239,12 @@ Alternatively, edit `.env` manually → restart.
 ```mermaid
 flowchart TD
     E[".env file"] -->|VERTEXAI=TRUE| V["🔐 Vertex AI mode"]
-    E -->|VERTEXAI=FALSE| A["🔑 AI Studio mode"]
+    E -->|VERTEXAI=FALSE| A["Check Paid Tier"]
+    A -->|PAID_API_KEY=TRUE| P["💎 AI Studio (Paid Tier)"]
+    A -->|PAID_API_KEY=FALSE| F["🔑 AI Studio (Free Tier)"]
     V --> R["python start.local.py"]
-    A --> R
+    P --> R
+    F --> R
     R --> W["ADK Web on :8888"]
 ```
 

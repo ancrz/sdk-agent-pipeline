@@ -11,6 +11,7 @@ Flow: User → Orchestrator → Archon(plan) → Ontos(audit) → Pragma(execute
 Shared State Keys:
     - execution_plan: The plan produced by Archon
     - audit_report:   The audit verdict produced by Ontos
+"""
 import os
 import time
 import asyncio
@@ -29,8 +30,10 @@ _limiter_lock = threading.Lock()
 _async_limiter_lock = asyncio.Lock()
 
 def _calculate_delay(model_name: str) -> float:
-    # If Vertex AI is enabled, skip rate limits
-    if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "TRUE").upper() == "TRUE":
+    # If Vertex AI or Paid API Key is enabled, skip rate limits
+    if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() == "TRUE":
+        return 0.0
+    if os.getenv("GOOGLE_GENAI_PAID_API_KEY", "FALSE").upper() == "TRUE":
         return 0.0
 
     model_lower = model_name.lower()
