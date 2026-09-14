@@ -273,14 +273,21 @@ flowchart TD
 
 ---
 
-## Available Models
+## Available Models & Free Tier Guardrails
 
-| Model | Speed | Reasoning | Free RPM | Vertex Cost |
+When using the **🔑 AI Studio (Free Tier)** via API Key, Google enforces strict Requests Per Minute (RPM) limits. 
+
+| Model | Assigned Role | Speed | Reasoning | Free RPM |
 |---|---|---|---|---|
-| `gemini-2.0-flash` | ⚡⚡⚡ | Good | 15 RPM | ~$0.10/1M in |
-| `gemini-2.0-flash-lite` | ⚡⚡⚡⚡ | Basic | 30 RPM | ~$0.05/1M in |
-| `gemini-2.5-flash` | ⚡⚡⚡ | Very good | 10 RPM | ~$0.15/1M in |
-| `gemini-2.5-pro` | ⚡⚡ | Excellent | 2 RPM | ~$1.25/1M in |
+| **`gemini-2.5-pro`** | Archon, Ontos, Dokimos | ⚡⚡ | Advanced (Architecture, Audit) | **2 RPM** |
+| **`gemini-2.5-flash`**| Pragma | ⚡⚡⚡ | Very good (Execution) | 10 RPM |
+| **`gemini-2.0-flash`**| Orchestrator, Graphos, Hermon | ⚡⚡⚡ | Good (Routing, Docs) | 15 RPM |
+| **`gemini-2.0-flash-lite`**| *(Custom log readers)* | ⚡⚡⚡⚡ | Basic | 30 RPM |
+
+### The `RateLimiter` Safety Net
+Because the V2 6-stage pipeline routes tasks through `gemini-2.5-pro` (Archon -> Ontos -> Dokimos), a naive execution would immediately crash against the 2 RPM limit (`429 RESOURCE_EXHAUSTED`).
+
+To solve this, `topos_pipeline/agent.py` implements a **Smart Rate Limiter**. If it detects you are using the Free Tier (via `.env`), it injects a thread-safe 30-second delay between Pro-model calls, ensuring your pipeline flows smoothly without crashing. If you upgrade to Vertex AI or a Paid API Key, these locks are instantly bypassed.
 
 To change a model, edit `model=` in `topos_pipeline/agent.py`.
 
