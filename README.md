@@ -318,3 +318,9 @@ google-sdk/
 | OAuth token expired | Credentials need refresh | `gcloud auth application-default login` |
 | `ModuleNotFoundError: google.adk` | venv not activated | `source .venv/bin/activate` |
 | Windows: `source` not found | bash syntax in PowerShell | Use `.venv\Scripts\Activate.ps1` instead |
+
+<div align="center">
+
+[⬆ Back to Top](#-topos-pipeline-v2--multi-agent-system)
+
+</div>
