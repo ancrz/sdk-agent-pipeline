@@ -142,6 +142,31 @@ flowchart LR
 
 ---
 
+## 🏗️ Agent Formatting (Source of Truth)
+Unlike the pure markdown environments of Claude Code or the JSON/Markdown `.agents/` configs of Antigravity CLI, the **SDK Agent Pipeline** constructs its agents programmatically in Python using the `google.adk` library. 
+
+**Format Pattern (`topos_pipeline/agent.py`):**
+```python
+from google.adk.agents import Agent
+
+my_agent = Agent(
+    name="my_agent",
+    model=os.getenv("TOPOS_MODEL_MYAGENT", "gemini-2.0-flash"),
+    description="Short description for the routing table.",
+    instruction="""You are MyAgent.
+Current working directory: {CWD}
+
+Write your detailed system prompt here.
+""",
+    output_key="my_agent_report",  # Critical for synchronous shared state
+    tools=[tools.run_shell_command, tools.read_file],
+)
+
+# Remember to register it in the orchestrator:
+# sub_agents=[..., my_agent]
+```
+If you wish to add a new subagent to this SDK, you **MUST** define it as a Python `Agent` instance in `agent.py`, assign it a unique `output_key` for state-passing, and add it to the Orchestrator's `sub_agents` array.
+
 ## Setup Guide
 
 ### Step 1 — Python Environment
@@ -311,7 +336,7 @@ google-sdk/
 ├── start.sh              # Bash launcher (Linux/macOS only, legacy)
 └── topos_pipeline/
     ├── __init__.py       # Package init (ADK discovery)
-    └── agent.py          # 4 agent definitions + shared state
+    └── agent.py          # 6 agent definitions + shared state (V2)
 ```
 
 ---
