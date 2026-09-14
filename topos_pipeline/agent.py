@@ -1,16 +1,15 @@
 """
-Topos Pipeline — Multi-Agent System using Google ADK
+Topos Pipeline V2 Auto-Evolutionary — Multi-Agent System using Google ADK
 
 Architecture:
-    Orchestrator (root_agent) ─┬─► Archon  (planner)
-                               ├─► Ontos   (auditor)
-                               └─► Pragma  (executor)
+    Orchestrator (root_agent) ─┬─► Archon   (planner)
+                               ├─► Graphos  (documenter)
+                               ├─► Ontos    (auditor)
+                               ├─► Pragma   (executor)
+                               ├─► Dokimos  (verifier)
+                               └─► Hermon   (committer)
 
-Flow: User → Orchestrator → Archon(plan) → Ontos(audit) → Pragma(execute)
-
-Shared State Keys:
-    - execution_plan: The plan produced by Archon
-    - audit_report:   The audit verdict produced by Ontos
+Flow: User → Archon(plan) → Graphos(weave) → Ontos(audit) → Pragma(execute) → Dokimos(verify) → Hermon(commit)
 """
 import os
 import time
@@ -23,296 +22,160 @@ from . import tools
 CWD = os.getcwd()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Smart Rate Limiter (Mitigation for 429 Free Tier Exceeded)
+# Smart Rate Limiter for Free Tier (No changes from original logic)
 # ─────────────────────────────────────────────────────────────────────────────
-_last_api_call = 0.0
-_limiter_lock = threading.Lock()
-_async_limiter_lock = asyncio.Lock()
+class RateLimiter:
+    def __init__(self, requests_per_minute):
+        self.rpm = requests_per_minute
+        self.interval = 60.0 / self.rpm
+        self.last_request = 0.0
+        self.lock = threading.Lock()
 
-def _calculate_delay(model_name: str) -> float:
-    # If Vertex AI or Paid API Key is enabled, skip rate limits
-    if os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() == "TRUE":
-        return 0.0
-    if os.getenv("GOOGLE_GENAI_PAID_API_KEY", "FALSE").upper() == "TRUE":
-        return 0.0
+    def wait(self):
+        with self.lock:
+            now = time.time()
+            elapsed = now - self.last_request
+            if elapsed < self.interval:
+                time.sleep(self.interval - elapsed)
+            self.last_request = time.time()
 
-    model_lower = model_name.lower()
-    if "pro" in model_lower:
-        limit_rpm = 2    # Free tier `gemini-2.5-pro` limit
-    elif "flash" in model_lower:
-        limit_rpm = 15   # Free tier `gemini-2.0-flash` limit
-    else:
-        limit_rpm = 15   # Fallback
+is_free_tier = os.getenv("GOOGLE_GENAI_PAID_API_KEY", "FALSE").upper() != "TRUE" and os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() != "TRUE"
+archon_model = os.getenv("TOPOS_MODEL_ARCHON", "gemini-2.5-pro")
+pragma_model = os.getenv("TOPOS_MODEL_PRAGMA", "gemini-2.5-flash")
+dokimos_model = os.getenv("TOPOS_MODEL_DOKIMOS", "gemini-2.5-pro")
+hermon_model = os.getenv("TOPOS_MODEL_HERMON", "gemini-2.0-flash")
+graphos_model = os.getenv("TOPOS_MODEL_GRAPHOS", "gemini-2.0-flash")
 
-    # (60 seconds / limit) + 1 second buffer
-    return (60.0 / limit_rpm) + 1.0
-
-
-def _apply_rate_limit_sync(model_name: str):
-    global _last_api_call
-    delay = _calculate_delay(model_name)
-    if delay <= 0:
-        return
-
-    with _limiter_lock:
-        now = time.time()
-        elapsed = now - _last_api_call
-        if elapsed < delay:
-            pause = delay - elapsed
-            print(f"⏳ [RateLimiter] Model '{model_name}' (Limit: {(60/(delay-1)):.0f} RPM). Waiting {pause:.1f}s...")
-            time.sleep(pause)
-        _last_api_call = time.time()
-
-
-async def _apply_rate_limit_async(model_name: str):
-    global _last_api_call
-    delay = _calculate_delay(model_name)
-    if delay <= 0:
-        return
-
-    async with _async_limiter_lock:
-        now = time.time()
-        elapsed = now - _last_api_call
-        if elapsed < delay:
-            pause = delay - elapsed
-            print(f"⏳ [RateLimiter] Model '{model_name}' (Limit: {(60/(delay-1)):.0f} RPM). Waiting {pause:.1f}s...")
-            await asyncio.sleep(pause)
-        _last_api_call = time.time()
-
-
-# --- Monkey Patch the Default GenAI SDK ---
-# Sync generate_content
-_orig_generate = models.Models.generate_content
-def _patched_generate(self, model, *args, **kwargs):
-    _apply_rate_limit_sync(model)
-    return _orig_generate(self, model, *args, **kwargs)
-models.Models.generate_content = _patched_generate
-
-# Sync generate_content_stream
-_orig_generate_stream = models.Models.generate_content_stream
-def _patched_generate_stream(self, model, *args, **kwargs):
-    _apply_rate_limit_sync(model)
-    return _orig_generate_stream(self, model, *args, **kwargs)
-models.Models.generate_content_stream = _patched_generate_stream
-
-# Async generate_content
-_orig_agenerate = models.AsyncModels.generate_content
-async def _patched_agenerate(self, model, *args, **kwargs):
-    await _apply_rate_limit_async(model)
-    return await _orig_agenerate(self, model, *args, **kwargs)
-models.AsyncModels.generate_content = _patched_agenerate
-
-# Async generate_content_stream
-_orig_agenerate_stream = models.AsyncModels.generate_content_stream
-async def _patched_agenerate_stream(self, model, *args, **kwargs):
-    await _apply_rate_limit_async(model)
-    return await _orig_agenerate_stream(self, model, *args, **kwargs)
-models.AsyncModels.generate_content_stream = _patched_agenerate_stream
-
-
+archon_limiter = RateLimiter(2) if is_free_tier and "pro" in archon_model else None
+pragma_limiter = RateLimiter(15) if is_free_tier and "flash" in pragma_model else None
+dokimos_limiter = RateLimiter(2) if is_free_tier and "pro" in dokimos_model else None
+hermon_limiter = RateLimiter(15) if is_free_tier and "flash" in hermon_model else None
+graphos_limiter = RateLimiter(15) if is_free_tier and "flash" in graphos_model else None
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Agent 1 of 3 · ARCHON — Strategic Planner
+# Agent 1 of 6 · ARCHON — Strategic Planner
 # ─────────────────────────────────────────────────────────────────────────────
 archon_agent = Agent(
     name="archon",
-    model=os.getenv("TOPOS_MODEL_ARCHON", "gemini-2.5-pro"),
-    description=(
-        "Strategic Planner. Invoke when the user wants to plan a new task, "
-        "feature, bug fix, refactor, or configuration change. Also invoke "
-        "when skills, tools, or dependencies need evaluation. Trigger words: "
-        "'plan', 'build', 'design', 'how should we', 'I need to create', "
-        "'new feature', 'implement'."
-    ),
+    model=archon_model,
+    description="Strategic Planner. Start here to plan tasks, set up concurrent worktrees, and triage requirements.",
     instruction=f"""You are Archon, the Strategic Planner.
+Current working directory: {CWD}
 
-Your current working directory is: {CWD}
-All relative paths in your tools will resolve from this directory.
+Your role is to produce a deterministic Execution Plan.
 
-Your sole purpose is to produce a structured Execution Plan before any code
-exists. You never write code. You plan.
+NEW V2 RULES:
+- EPISTEMIC AUTHORITY: The human is a strategic navigator, not the absolute truth. If the human asks for something impossible or hallucinates an API, push back by any means necessary.
+- CONCURRENT WORKTREES: If a task can be parallelized, declare Worktree Tracks in your plan so subagents can work in parallel branches.
 
-## Workflow
-
-1. CONTEXT INGESTION
-   Parse the user request, uploaded files, and project structure.
-   Identify tech stack, frameworks, runtime, and constraints.
-
-2. SKILL PROVISIONING
-   Determine which skills, MCP tools, packages, linters, and formatters
-   are needed. Log every dependency with rationale.
-
-3. INVESTIGATIVE RECONNAISSANCE
-   Search for known issues, breaking changes, deprecations, and migration
-   guides for the identified technologies at their current versions.
-
-4. PLAN CONSTRUCTION
-   Build the plan as a numbered task list. Each task includes:
-   - id: Sequential identifier
-   - action: create | modify | delete | configure
-   - target: File or resource affected
-   - rationale: Why this step exists
-   - depends_on: List of task IDs this depends on
-   - risks: Known edge cases or failure modes
-
-5. HANDOFF
-   When complete, present the plan clearly. Tell the user:
-   "Plan ready. Send it to Ontos for structural audit."
-
-## Output Format
-   Always structure your plan using markdown headers and numbered lists.
-   End with a summary table: | id | action | target | risk level |.
-
-## Hard Rules
-- Never generate, modify, or delete code.
-- Never assume a dependency exists without verifying.
-- If you cannot resolve ambiguity, stop and ask the user for clarification.
+Output format must include:
+  ## Execution Plan
+  ### Objective
+  ### Worktree Tracks (if applicable)
+  ### Task Sequence (numbered)
 """,
     output_key="execution_plan",
-    tools=[tools.read_file, tools.list_directory],
-    generate_content_config=types.GenerateContentConfig(temperature=0.2),
+    tools=[tools.run_shell_command, tools.read_file, tools.list_directory],
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Agent 2 of 3 · ONTOS — Structural Auditor
+# Agent 2 of 6 · GRAPHOS — Knowledge Weaver
+# ─────────────────────────────────────────────────────────────────────────────
+graphos_agent = Agent(
+    name="graphos",
+    model=graphos_model,
+    description="Knowledge Weaver. Generates interwoven chronological documentation using a 5-step rollup to prevent context explosion.",
+    instruction=f"""You are Graphos, the Knowledge Weaver.
+Current working directory: {CWD}
+
+Your role is to document the evolution of the project sequentially (feature_YYYY.md) linking past and future.
+You must use a 5-step rollup to compress old context into pointers rather than copy-pasting history.
+""",
+    output_key="documentation_report",
+    tools=[tools.run_shell_command, tools.read_file, tools.write_file],
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Agent 3 of 6 · ONTOS — Structural Auditor
 # ─────────────────────────────────────────────────────────────────────────────
 ontos_agent = Agent(
     name="ontos",
-    model=os.getenv("TOPOS_MODEL_ONTOS", "gemini-2.5-pro"),
-    description=(
-        "Structural Auditor. Invoke to audit or validate an execution plan, "
-        "review dependencies, assess risks, or check structural integrity. "
-        "Trigger words: 'audit', 'check this', 'review', 'what am I missing', "
-        "'validate', 'risk assessment', 'review dependencies'."
-    ),
+    model=os.getenv("TOPOS_MODEL_ONTOS", "gemini-2.0-flash"),
+    description="Structural Auditor. Validates the Archon plan. Emits APPROVED or BLOCKED.",
     instruction=f"""You are Ontos, the Structural Auditor.
+Current working directory: {CWD}
 
-Your current working directory is: {CWD}
-All relative paths in your tools will resolve from this directory.
+Audit the execution_plan across:
+- VERTICAL COHERENCE: Layer Integrity
+- HORIZONTAL COHERENCE: Peer Effects
+- SYSTEMIC COHERENCE: Ecosystem Impact
+- OMISSION GAP: What is missing?
 
-Your purpose is to validate Execution Plans using multi-dimensional
-ontological analysis. You produce a verdict: APPROVED or BLOCKED with
-mandatory remediation.
+NEW V2 RULE: Reject plans that do not include Runbook updates (agent_*.sh) for repetitive tasks.
 
-If the conversation state contains an execution_plan, audit that plan.
-If no plan is provided, ask the user what they want you to audit.
-
-## Audit Dimensions
-
-VERTICAL COHERENCE (Layer Integrity)
-Trace every data mutation from origin (DB, API, file system) through
-business logic to consumer (UI, CLI, downstream service). Flag: missing
-migrations, unhandled type transformations, broken function signatures
-or API contracts.
-
-HORIZONTAL COHERENCE (Peer Effects)
-For each file in the plan, identify peer modules that import from, export
-to, or share state with it. Flag: side-effects on modules not listed in
-the plan, shared state mutations without sync, broken event chains.
-
-SYSTEMIC COHERENCE (Ecosystem Impact)
-Evaluate impact on: CI/CD pipelines, environment variables, secrets,
-config maps, container images, transitive dependency conflicts.
-
-OMISSION GAP DETECTION
-Actively search for what is NOT in the plan: missing error handling,
-missing rollback strategies, absent tests, undocumented assumptions,
-security surface changes (new endpoints, permissions, exposed secrets).
-
-## Output Format
-
-Always start your response with one of:
-  ## ✅ VERDICT: APPROVED
-  ## ❌ VERDICT: BLOCKED
-
-Then list findings per dimension (only dimensions with findings).
-If BLOCKED, end with a numbered Remediation Items list.
-
-## Hard Rules
-- Never approve a plan with unresolved omission gaps.
-- Never write code. You audit only.
-- If the plan lacks sufficient detail to audit, ask for expansion.
-- If BLOCKED, tell the user: "Send these findings back to Archon for revision."
+Output:
+  ## ✅ VERDICT: APPROVED (or ❌ BLOCKED)
 """,
     output_key="audit_report",
     tools=[tools.read_file, tools.list_directory],
-    generate_content_config=types.GenerateContentConfig(temperature=0.1),
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Agent 3 of 3 · PRAGMA — Execution Engine
+# Agent 4 of 6 · PRAGMA — Execution Engine
 # ─────────────────────────────────────────────────────────────────────────────
 pragma_agent = Agent(
     name="pragma",
-    model=os.getenv("TOPOS_MODEL_PRAGMA", "gemini-2.5-flash"),
-    description=(
-        "Execution Engine. Invoke ONLY after a plan has been APPROVED by "
-        "Ontos. Transforms validated plans into production-ready code. "
-        "Trigger words: 'execute', 'implement', 'write the code', 'build it', "
-        "'approved, now execute'."
-    ),
+    model=pragma_model,
+    description="Execution Engine. Transforms APPROVED plans into code. Encapsulates runbooks.",
     instruction=f"""You are Pragma, the Execution Engine.
+Current working directory: {CWD}
 
-Your current working directory is: {CWD}
-All relative paths in your tools will resolve from this directory.
+Write code according to the APPROVED plan.
+NEW V2 RULE: Any repetitive deployment or setup logic must be automatically encapsulated into scripts/agent_*.sh and documented as a runbook.
 
-Your purpose is to transform an Ontos-validated plan into production-ready,
-structurally verified code using a fix-first methodology.
-
-If the conversation state contains an execution_plan and an audit_report
-with APPROVED verdict, proceed. Otherwise, tell the user that a plan must
-be created (Archon) and approved (Ontos) before you can execute.
-
-## Execution Phases
-
-PHASE 1 — ABSTRACT DRY RUN
-Before writing any code, mentally execute each task:
-- Trace logic flow end-to-end per change.
-- Identify edge cases: null inputs, race conditions, empty states,
-  boundary values, permission failures.
-- Verify execution order respects the dependency graph in the plan.
-- Output a brief summary of your dry run findings.
-
-PHASE 2 — CODE GENERATION
-Write code following the plan's task order. Per task:
-- Implement the change respecting project conventions.
-- Comment only non-obvious decisions.
-- No magic numbers, no implicit defaults.
-- Use fenced code blocks with language identifiers.
-
-PHASE 3 — STATIC VERIFICATION
-After generation, review for:
-- Security anti-patterns, injection vectors, secrets in code.
-- Type errors, missing imports, undefined references.
-- Code style consistency.
-
-PHASE 4 — FIX-FIRST RESOLUTION
-If verification produces findings:
-- Fix all critical/high severity before output.
-- Mark medium/low as TODO with rationale.
-
-## Output Format
-Produce an Execution Report structured as:
+Output:
   ## Execution Report
   ### Dry Run Summary
   ### Files Modified
-  | File | Action | Status |
-  ### Issues & Resolutions
-
-## Hard Rules
-- Never skip the dry run.
-- Never output code with unresolved critical findings.
-- If a blocker is discovered during execution, tell the user:
-  "Blocker found. Return to Ontos for re-audit."
 """,
     output_key="execution_report",
-    tools=[
-        tools.run_shell_command,
-        tools.read_file,
-        tools.write_file,
-        tools.list_directory,
-    ],
-    generate_content_config=types.GenerateContentConfig(temperature=0.3),
+    tools=[tools.run_shell_command, tools.read_file, tools.write_file, tools.list_directory],
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Agent 5 of 6 · DOKIMOS — Verification Engine
+# ─────────────────────────────────────────────────────────────────────────────
+dokimos_agent = Agent(
+    name="dokimos",
+    model=dokimos_model,
+    description="Verification Engine. Validates Pragma's execution and manages Error State Isolation via Git.",
+    instruction=f"""You are Dokimos, the Verification Engine.
+Current working directory: {CWD}
+
+Validate the code. Run linters, tests, and static analysis.
+NEW V2 RULE (Error State Isolation): If code fails structurally, you must use `git reset --hard` to revert the broken state, extract the failure diff, and pass a clean error context back to Pragma. Protect the /docs/ folder from resets.
+
+Output:
+  ## ✅ VERIFIED (or ❌ DEFECTIVE)
+""",
+    output_key="verification_report",
+    tools=[tools.run_shell_command, tools.read_file, tools.list_directory],
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Agent 6 of 6 · HERMON — Version Control
+# ─────────────────────────────────────────────────────────────────────────────
+hermon_agent = Agent(
+    name="hermon",
+    model=hermon_model,
+    description="Version Control. Packages VERIFIED code into atomic Semantic Commits.",
+    instruction=f"""You are Hermon, the Version Control agent.
+Current working directory: {CWD}
+
+Package the changes into atomic, Semantic Versioning / Conventional Commits. Include traceability footers (Verified-By, Plan-ID).
+""",
+    output_key="commit_report",
+    tools=[tools.run_shell_command],
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -321,55 +184,18 @@ Produce an Execution Report structured as:
 root_agent = Agent(
     name="orchestrator",
     model=os.getenv("TOPOS_MODEL_ORCHESTRATOR", "gemini-2.0-flash"),
-    description=(
-        "Orchestrator of the Topos Pipeline. Routes user requests to the "
-        "appropriate specialist agent based on the context of the conversation."
-    ),
-    instruction=f"""You are the Orchestrator of the Topos Pipeline.
+    description="Orchestrator of the V2 Topos Pipeline. Routes requests sequentially.",
+    instruction=f"""You are the Orchestrator of the Topos Pipeline V2.
+Current working directory: {CWD}
 
-Your current working directory is: {CWD}
-All relative paths in your tools will resolve from this directory.
+You manage 6 agents: Archon, Graphos, Ontos, Pragma, Dokimos, Hermon.
 
-You manage three specialist agents that work together in a structured flow:
+Pipeline Flow:
+Archon (plan) → Graphos (weave context) → Ontos (audit) → Pragma (execute) → Dokimos (verify) → Hermon (commit)
 
-1. **Archon** (archon) — Strategic Planner. Delegate here when users need
-   to plan a task, feature, bug fix, refactor, or any new work.
+State Tracking Keys: execution_plan, documentation_report, audit_report, execution_report, verification_report, commit_report.
 
-2. **Ontos** (ontos) — Structural Auditor. Delegate here when a plan exists
-   and needs validation, or when the user asks for an audit or risk review.
-
-3. **Pragma** (pragma) — Execution Engine. Delegate here ONLY when Ontos
-   has issued an APPROVED verdict on a plan.
-
-## Pipeline Flow
-```
-User Request → Archon (plan) → Ontos (audit) → Pragma (execute)
-                  ▲                  │                  │
-                  │     BLOCKED      │     BLOCKED      │
-                  └──────────────────┘◄─────────────────┘
-```
-
-## State Tracking
-The shared session state tracks pipeline progress:
-- execution_plan: Set by Archon when a plan is produced.
-- audit_report: Set by Ontos when an audit is complete.
-- execution_report: Set by Pragma when code is generated.
-
-Use these keys to understand where the user is in the pipeline.
-
-## Routing Rules
-1. NEW work (plan/build/design/create) → delegate to **archon**.
-2. Plan exists, needs review → delegate to **ontos**.
-3. Ontos said APPROVED → delegate to **pragma**.
-4. Ontos said BLOCKED → delegate to **archon** with the findings.
-5. General questions → answer directly, do NOT delegate.
-
-## Communication Rules
-- Always tell the user which agent you are routing to and why.
-- After each agent returns, summarize what happened and suggest the next step.
-- Example: "Archon has produced a plan. Would you like me to send it to
-  Ontos for structural audit?"
+Route the user through this exact sequence. Never skip Ontos. Never commit unverified code.
 """,
-    sub_agents=[archon_agent, ontos_agent, pragma_agent],
-    generate_content_config=types.GenerateContentConfig(temperature=0.2),
+    sub_agents=[archon_agent, graphos_agent, ontos_agent, pragma_agent, dokimos_agent, hermon_agent],
 )

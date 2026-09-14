@@ -56,21 +56,29 @@ sequenceDiagram
     participant U as User
     participant O as Orchestrator
     participant A as Archon
+    participant G as Graphos
     participant N as Ontos
     participant P as Pragma
+    participant D as Dokimos
+    participant H as Hermon
 
     U->>O: "Build a REST API for users"
-    O->>A: delegate (new task)
-    A-->>O: state[execution_plan] = plan
-    O->>N: delegate (plan ready)
+    O->>A: delegate (plan)
+    A-->>O: state[plan] = plan
+    O->>G: delegate (weave docs)
+    G-->>O: state[docs] = docs
+    O->>N: delegate (audit)
     alt APPROVED
-        N-->>O: state[audit_report] = ✅ APPROVED
-        O->>P: delegate (approved)
-        P-->>O: state[execution_report] = code + report
-        O->>U: Summary + next steps
+        N-->>O: state[audit] = APPROVED
+        O->>P: delegate (execute)
+        P-->>O: state[code] = code
+        O->>D: delegate (verify)
+        D-->>O: state[verified] = true
+        O->>H: delegate (commit)
+        H-->>O: state[committed] = true
     else BLOCKED
-        N-->>O: state[audit_report] = ❌ BLOCKED + findings
-        O->>A: delegate (revise with findings)
+        N-->>O: state[audit] = BLOCKED
+        O->>A: delegate (revise)
     end
 ```
 
@@ -118,6 +126,19 @@ flowchart LR
 > To prevent `429 RESOURCE_EXHAUSTED` errors when using the Free Tier, the ADK Pipeline automatically activates a Smart Rate Limiter. It dynamically delays execution based on the chosen model (`pro` vs `flash`) inside your `.env` configuration. If you switch to the Paid Tier or Vertex AI, the rate limiter is fully bypassed.
 
 ---
+
+
+---
+
+## 🏛️ Event-Driven MVP Architecture (Docs)
+
+The `/docs/` directory contains the architectural specs for the **ACP Event-Driven Automation MVP**.
+This MVP scales the pipeline to enterprise environments using:
+- **Frontend Controller (AAP/AWX)**: Uses Ansible AWX inventory to select Linux deployment targets.
+- **Anchor MCPs (Anclas MCP)**: Deploying localized, hyper-specific MCPs acting as strict Guardrails derived from ITIL ITSM v5 templates, avoiding EDR and permission blocks.
+- **A2A & ACP**: Agent-to-Agent communication under an Administrator Service Account (ACP).
+
+See `docs/mvp-architecture-awx-mcp.md` for the complete SDD (Spec Driven Development) outline.
 
 ## Setup Guide
 
