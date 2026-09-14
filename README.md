@@ -1,59 +1,71 @@
-# 🧠 Topos Pipeline — Multi-Agent System
+# 🧠 Topos Pipeline V2 — Multi-Agent System
 
 > Powered by [Google ADK](https://google.github.io/adk-docs/) · Python 3.10+ · Linux & Windows
 
-A 4-agent orchestration pipeline that **plans**, **audits**, and **executes** tasks using Google's Agent Development Kit.
+A 6-agent orchestration pipeline that **plans**, **weaves context**, **audits**, **executes**, **verifies**, and **commits** tasks using Google's Agent Development Kit.
 
 ---
 
-## Architecture
+## 🏛️ Event-Driven MVP Architecture (Docs)
+
+The `/docs/` directory contains the architectural specs for the **ACP Event-Driven Automation MVP**.
+This MVP scales the pipeline to enterprise environments using:
+- **Frontend Controller (AAP/AWX)**: Uses Ansible AWX inventory to select Linux deployment targets.
+- **Anchor MCPs (Anclas MCP)**: Deploying localized, hyper-specific MCPs acting as strict Guardrails derived from ITIL ITSM v5 templates, avoiding EDR and permission blocks.
+- **A2A & ACP**: Agent-to-Agent communication under an Administrator Service Account (ACP).
+
+See [`docs/mvp-architecture-awx-mcp.md`](./docs/mvp-architecture-awx-mcp.md) for the complete SDD (Spec Driven Development) outline.
+
+---
+
+## 🏗️ Architecture (V2 Auto-Evolutionary)
 
 ```mermaid
 graph TD
     U["👤 User"] -->|message| O["🎯 Orchestrator<br/>gemini-2.0-flash"]
     O -->|"🆕 new task"| A["📋 Archon<br/>gemini-2.5-pro"]
-    O -->|"📝 plan exists"| N["🔍 Ontos<br/>gemini-2.5-pro"]
-    O -->|"✅ APPROVED"| P["⚡ Pragma<br/>gemini-2.5-flash"]
+    O -->|"📝 weave docs"| G["📝 Graphos<br/>gemini-2.0-flash"]
+    O -->|"🔍 audit plan"| N["🔍 Ontos<br/>gemini-2.5-pro"]
+    O -->|"⚡ execute"| P["⚙️ Pragma<br/>gemini-2.5-flash"]
+    O -->|"✅ verify"| D["🛡️ Dokimos<br/>gemini-2.5-pro"]
+    O -->|"📦 commit"| H["📦 Hermon<br/>gemini-2.0-flash"]
 
     A -->|"execution_plan"| O
+    G -->|"documentation_report"| O
     N -->|"✅ APPROVED"| O
     N -->|"❌ BLOCKED"| A
     P -->|"execution_report"| O
-    P -->|"🚫 blocker found"| N
+    D -->|"✅ VERIFIED"| O
+    D -->|"❌ DEFECTIVE"| P
+    H -->|"commit_report"| O
 
     style O fill:#4285F4,color:#fff
-    style A fill:#34A853,color:#fff
-    style N fill:#FBBC04,color:#000
-    style P fill:#EA4335,color:#fff
+    style A fill:#8B5CF6,color:#fff
+    style G fill:#475569,color:#fff
+    style N fill:#3B82F6,color:#fff
+    style P fill:#10B981,color:#fff
+    style D fill:#F59E0B,color:#fff
+    style H fill:#334155,color:#fff
 ```
 
 ### Agent Roles
 
-| Agent | Model | Temperature | Purpose |
-|---|---|---|---|
-| **Orchestrator** | `gemini-2.0-flash` | 0.2 | Routes requests, tracks pipeline state |
-| **Archon** | `gemini-2.5-pro` | 0.2 | Strategic Planner — creates execution plans, never writes code |
-| **Ontos** | `gemini-2.5-pro` | 0.1 | Structural Auditor — validates plans, issues APPROVED/BLOCKED |
-| **Pragma** | `gemini-2.5-flash` | 0.3 | Execution Engine — generates code from approved plans |
-
-### Agent Capabilities (Tools)
-
-To interact with the host machine, the following Python functions (tools) are injected into the agents via `topos_pipeline/tools.py`:
-
-* **`run_shell_command`**: Execute bash/shell commands (e.g., tests, linters, git). Available to: `pragma`.
-* **`read_file`**: Read file contents. Available to: `archon`, `ontos`, `pragma`.
-* **`write_file`**: Write or overwrite files. Available to: `pragma`.
-* **`list_directory`**: Explore the file system. Available to: `archon`, `ontos`, `pragma`.
-
-These capabilities give the ADK agents "Computer Use" powers local to the host machine.
+| Agent | Model | Purpose |
+|---|---|---|
+| **Orchestrator** | `gemini-2.0-flash` | Routes requests, tracks pipeline state |
+| **Archon** | `gemini-2.5-pro` | Strategic Planner — creates execution plans and worktrees |
+| **Graphos** | `gemini-2.0-flash` | Knowledge Weaver — maintains chronological rollup docs |
+| **Ontos** | `gemini-2.5-pro` | Structural Auditor — validates plans, issues APPROVED/BLOCKED |
+| **Pragma** | `gemini-2.5-flash` | Execution Engine — generates code and encapsulates runbooks |
+| **Dokimos** | `gemini-2.5-pro` | Verification Engine — tests code, manages Error State Isolation via Git |
+| **Hermon** | `gemini-2.0-flash` | Version Control — creates atomic semantic commits |
 
 ### Shared State
 
-Agents communicate via `output_key` session state:
+Agents communicate programmatically via the `output_key` session state dictionary:
 
 ```mermaid
 sequenceDiagram
-    participant U as User
     participant O as Orchestrator
     participant A as Archon
     participant G as Graphos
@@ -62,7 +74,6 @@ sequenceDiagram
     participant D as Dokimos
     participant H as Hermon
 
-    U->>O: "Build a REST API for users"
     O->>A: delegate (plan)
     A-->>O: state[plan] = plan
     O->>G: delegate (weave docs)
@@ -85,6 +96,7 @@ sequenceDiagram
 ---
 
 ## Three Authentication Modes
+
 
 ```mermaid
 flowchart LR
@@ -129,16 +141,6 @@ flowchart LR
 
 
 ---
-
-## 🏛️ Event-Driven MVP Architecture (Docs)
-
-The `/docs/` directory contains the architectural specs for the **ACP Event-Driven Automation MVP**.
-This MVP scales the pipeline to enterprise environments using:
-- **Frontend Controller (AAP/AWX)**: Uses Ansible AWX inventory to select Linux deployment targets.
-- **Anchor MCPs (Anclas MCP)**: Deploying localized, hyper-specific MCPs acting as strict Guardrails derived from ITIL ITSM v5 templates, avoiding EDR and permission blocks.
-- **A2A & ACP**: Agent-to-Agent communication under an Administrator Service Account (ACP).
-
-See `docs/mvp-architecture-awx-mcp.md` for the complete SDD (Spec Driven Development) outline.
 
 ## Setup Guide
 
