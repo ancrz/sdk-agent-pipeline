@@ -275,6 +275,8 @@ flowchart TD
 
 ## Available Models & Free Tier Guardrails
 
+> **Note:** Validated on September 13, 2026. The source of truth states that the following models and limits apply for API Key (Free Tier) usage.
+
 When using the **🔑 AI Studio (Free Tier)** via API Key, Google enforces strict Requests Per Minute (RPM) limits. 
 
 | Model | Assigned Role | Speed | Reasoning | Free RPM |
