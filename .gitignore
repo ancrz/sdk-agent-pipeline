@@ -8,3 +8,5 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+config/mcp/tokens.env
+config/mcp/servers.json

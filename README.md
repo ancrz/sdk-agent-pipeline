@@ -14,6 +14,23 @@ Provider keys can live in [vault-transit-stack](https://github.com/ancrz/vault-t
 > reached through the gateway as the `orchestrator` role — and only the **smaller agent roles
 > that do useful work** run here, each with its own small model, token, limits and audit.
 
+## Purpose: an independent blueprint
+
+The engine is **decoupled from vanguard-control**: it builds, runs and is tested on its own, and
+vanguard is never needed at run time. It is kept as a protected, self-contained copy of the
+technology (a failover for the code) and as a **blueprint to transplant** into any project that
+needs an agentic core:
+
+| A project that needs… | Takes |
+|---|---|
+| one gateway in front of every model call (keys, limits, failover, audit, cost) | `model_gateway/` + `store/` + Postgres + Valkey |
+| small agents doing bounded work over A2A | `workers/` (+ the gateway) |
+| its own tools for those agents | an MCP server declared in `ENGINE_MCP_SERVERS` ([docs/mcp.md](docs/mcp.md)) |
+| provider keys out of the database | [vault-transit-stack](https://github.com/ancrz/vault-transit-stack) + `docker-compose.openbao.yml` |
+
+Nothing here imports vanguard-control. The [extraction map](#extraction-map-from-vanguard-control)
+says where each piece came from, so later improvements there can be carried over by hand.
+
 ---
 
 ## Architecture
@@ -44,7 +61,8 @@ flowchart LR
     subgraph OPT["optional"]
         OL["ollama (profile local-llm)<br/>local fallback"]
         BAO["vault-transit-stack<br/>openbao-secrets:8200"]
-        AAP["Ansible Controller MCP<br/>(AAP_MCP_URL)"]
+        AAP["Ansible Controller MCP<br/>(AAP_MCP_URL, RE)"]
+        MCP["any MCP server<br/>(ENGINE_MCP_SERVERS)"]
     end
 
     CHAT -- "x-goog-api-key = orchestrator token" --> HA
@@ -58,6 +76,7 @@ flowchart LR
     GA & GB -. "AppRole gateway: read agent-ai/" .-> BAO
     W --> PG
     W -. "executor · validator · medic" .-> AAP
+    W -. "allowlist + tokens per request" .-> MCP
 ```
 
 | Piece | What it does |
@@ -65,6 +84,7 @@ flowchart LR
 | **model-gateway** ×2 | Speaks the Gemini REST protocol, so ADK/google-genai clients work unchanged with `GOOGLE_GEMINI_BASE_URL`. Each caller's "API key" is its **gateway token**; the gateway derives the role from it, resolves the role's model and credential (**the role cannot pick a pricier model**), injects the real provider key, enforces limits, walks the failover chain and writes an audit row. Two replicas answer the same DNS name; Docker's DNS returns only running containers, and all shared state is in Valkey. |
 | **worker-agents** | One process serving one ADK agent per role (G-AGENTS A4), each built from an `AgentSpec` (instruction, skills, how it asks a human, which Controller tools it may call). One role is served at the root; several each under `/<role>/`. Tasks and ADK sessions persist in Postgres, so an `INPUT_REQUIRED` task survives a restart. |
 | **store/** | The data contract: SQLAlchemy models, model resolution, presets, failover chains, prices, notifications, schema bootstrap (`python -m store.schema`) and the admin CLI (`python -m store.admin`). |
+| **MCP tools** | Each role can use tools from MCP servers: two wired in code (the Ansible Controller's aap-mcp front, the knowledge server) and **any other declared by configuration** with an allowlist and per-request tokens — see [docs/mcp.md](docs/mcp.md). |
 | **orchestrator/** | Runtime shared by gateway and workers: per-role models, Valkey RPM limiter, Fernet credentials, the OpenBao client, activity attribution, base instructions + addenda, and the deterministic stand-in. |
 
 ### Roles
@@ -220,6 +240,30 @@ is sealed or unreachable; with nothing cached, reads **fail closed**.
 
 ---
 
+## MCP tools for the agents
+
+The blueprint is [docs/mcp.md](docs/mcp.md). In short:
+
+```jsonc
+// ENGINE_MCP_SERVERS (or a file: ENGINE_MCP_SERVERS_FILE=/app/config/mcp/servers.json)
+[{ "name": "tickets", "url": "http://tickets-mcp:8000/mcp", "roles": ["documentalist"],
+   "tools": ["search_tickets", "get_ticket"],
+   "auth": { "type": "bearer_env", "env": "TICKETS_MCP_TOKEN", "forward_worker_token": "X-Engine-Worker-Token" } }]
+```
+
+- **Allowlist only**: the model sees the listed tools and nothing the server adds later.
+- **No secret in the declaration**: tokens live in `config/mcp/tokens.env` (gitignored), the only
+  environment file the worker loads; the task's own token is forwarded per request.
+- **Fail closed**: a bad declaration stops the worker at start.
+- **Prove it**: `docker compose --profile mcp-example up -d` starts a reference server
+  (`echo`, `utc_now`, `whoami`, and a `delete_everything` the allowlist hides), then
+  `docker compose exec worker-agents python -m workers.mcp_servers check --call whoami`.
+
+The Ansible Controller connection (`aap_mcp_toolset`, the official aap-mcp-server in front of
+vanguard-control's ansible-core Controller) stays in code as the reference implementation.
+
+---
+
 ## Agent teams and addenda
 
 ```bash
@@ -242,11 +286,27 @@ metadata, after the operator's (A2) and under the base instruction.
 | Status: preset, profiles, credentials, teams, call counts | `docker compose --profile admin run --rm admin status` |
 | Switch preset (no restart) | `… admin preset activate offline \| demo-free \| paid \| custom \| local` |
 | More roles in the worker | `ENGINE_AGENT_ROLES=documentalist,author` → `docker compose up -d worker-agents` |
+| What each MCP server offers each role | `docker compose exec worker-agents python -m workers.mcp_servers check [--call TOOL --args '{}']` |
 | Local model fallback | `docker compose --profile local-llm up -d` (Ollama; only the gateway reaches it) |
 | Calls and cost per role | `docker compose exec postgres psql -U engine -c "select role, count(*), sum(cost_usd) from model_calls group by 1"` |
 | Notifications | `… psql -U engine -c "select event, severity, title, count, last_at from notifications order by last_at desc"` |
 | Gateway admin API (agents network) | `GET /admin/serving`, `DELETE /admin/breakers?prefix=…` with `Authorization: Bearer $VANGUARD_GATEWAY_ADMIN_TOKEN` |
-| Tests | `pip install -r agents/base/requirements.txt pytest pytest-asyncio aiosqlite && pytest` |
+| Tests (120) | `pip install -r agents/base/requirements.txt pytest pytest-asyncio aiosqlite && pytest` |
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| `worker-agents` unhealthy, logs `ENGINE_MCP_SERVERS: …` | a bad MCP declaration (empty allowlist, unknown role, inline secret, missing token variable): fix it, `docker compose up -d worker-agents` |
+| `/healthz` 404 on the worker | one role is served at the root (its card at `/.well-known/agent-card.json`); `/healthz` and `/<role>/` exist with two or more roles |
+| `401` from the gateway | the caller's token is not one of `VANGUARD_GATEWAY_TOKEN_<ROLE>` (a worker serving several roles sends each role's own token per request) |
+| `429` with `Retry-After` | the RPM slot did not free within `VANGUARD_GATEWAY_MAX_WAIT_S`; raise the limit or the profile's `rpm`, or use another account |
+| every answer is "Deterministic …" | the active preset is `offline`, or every route failed and the stand-in answered (`notifications`: `gateway.last_resort`) |
+| `gateway.breaker_opened` | an account answered an auth error: fix the key (`credential put` again), then `DELETE /admin/breakers?prefix=account:<name>` |
+| `secrets.unavailable` / OpenBao refused | the AppRole directory is not mounted or not readable (`HOST_GID`), the gateway is not on `bao-secrets-net`, or `BAO_ADDR` is not `https://openbao-secrets:8200` |
+| `check` reports `401` for an MCP server | the token in `config/mcp/tokens.env` differs from the server's |
 
 ---
 
@@ -260,6 +320,7 @@ metadata, after the operator's (A2) and under the base instruction.
 | `VANGUARD_GATEWAY_ADMIN_TOKEN` | generated | the gateway's admin API |
 | `VANGUARD_DEFAULT_MODEL` / `VANGUARD_MODEL_<ROLE>` | `gemini-3.5-flash-lite` / empty | the `.env` step of model resolution |
 | `ENGINE_AGENT_ROLES` | `documentalist` | roles served by `worker-agents` |
+| `ENGINE_MCP_SERVERS` / `ENGINE_MCP_SERVERS_FILE` | empty | MCP servers for the agents ([docs/mcp.md](docs/mcp.md)) |
 | `VANGUARD_SECRET_BACKEND` | `local` | `local` (Fernet, `VANGUARD_CREDENTIALS_KEY`) or `openbao` |
 | `VANGUARD_BAO_MOUNTS` | `{"model_provider":"agent-ai"}` | the store's mount names (vanguard-control uses `vanguard-ai`) |
 | `VANGUARD_GATEWAY_RPM_FREE` / `_PAID` / `VANGUARD_GATEWAY_RPM` | `10` / `0` / empty | requests per minute per account and model (0 = unlimited) |
@@ -275,15 +336,18 @@ projects unchanged.
 
 ```text
 sdk-agent-pipeline/
-├── docker-compose.yml           # postgres, valkey, schema, model-gateway ×2, worker-agents (+ admin, local-llm)
+├── docker-compose.yml           # postgres, valkey, schema, model-gateway ×2, worker-agents (+ admin, local-llm, mcp-example)
 ├── docker-compose.openbao.yml   # overlay: AppRoles and the secrets network of vault-transit-stack
 ├── .env.example
 ├── agents/base/                 # base image: ADK, A2A, MCP, FastAPI, SQLAlchemy, Valkey
 ├── model_gateway/               # the gateway (app, providers, failover, local models, signatures) + tests
-├── workers/                     # AgentSpec registry, ADK agent factory, A2A entrypoint (one or many roles)
+├── workers/                     # AgentSpec registry, ADK agent factory, A2A entrypoint, mcp_servers.py
+├── config/mcp/                  # servers.example.json, tokens.env.example (tokens.env is gitignored)
+├── examples/mcp-example/        # a reference MCP server to prove a connection
+├── docs/mcp.md                  # the MCP blueprint
 ├── orchestrator/                # runtime: models, ratelimit, credentials, secrets, activity, instructions, deterministic
 ├── store/                       # models, services, prices, schema bootstrap, admin CLI
-├── tests/                       # activity header, OpenBao client, worker specs and instructions
+├── tests/                       # activity header, OpenBao client, workers, MCP servers (against the example)
 └── scripts/                     # bootstrap_env.py, build.sh, smoke.sh / smoke.py
 ```
 
@@ -292,7 +356,7 @@ sdk-agent-pipeline/
 | Here | vanguard-control | Adaptation |
 |---|---|---|
 | `model_gateway/` | `model_gateway/` | imports `api.*` → `store.*`; the agent team is read through `activity_runs.agent_team_id` (there: run → plan → team) |
-| `workers/` | `workers/` | none |
+| `workers/` | `workers/` | `mcp_servers.py` added (declared MCP servers); `agent.py` appends their toolsets |
 | `orchestrator/` | `activity, credentials, secrets, models, deterministic, stepparams, ratelimit, instructions` | `secrets.mounts()`: mount names from `VANGUARD_BAO_MOUNTS` |
 | `store/models/` | `api/models/automation.py`, `activity.py`, `notification.py` | only the gateway's tables; runs and notifications without plans, users or inventories |
 | `store/services/` | `api/services/models, presets, failover, prices, credentials, notify` | `notify`: no recipients (rows + logs); `credentials`: `store()` only |

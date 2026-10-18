@@ -219,6 +219,12 @@ def make_worker_agent(role: str) -> Agent:
     if knowledge is not None:
         tools.append(knowledge)
         instruction += _KNOWLEDGE_NOTE
+    # Engine addition (docs/mcp.md): the MCP servers declared in ENGINE_MCP_SERVERS for this role, with
+    # the same pattern as the two above (allowlist, token per request). A bad declaration stops the start.
+    from workers import mcp_servers
+    for toolset, note in mcp_servers.toolsets_for(role, VALID_ROLES):
+        tools.append(toolset)
+        instruction += note
     tunable = spec.tunable
 
     return Agent(

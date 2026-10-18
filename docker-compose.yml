@@ -20,7 +20,8 @@
 #               documentalist). executor, validator, medic and author act through an Ansible
 #               Controller's MCP front: add them to ENGINE_AGENT_ROLES with AAP_MCP_URL set.
 #   local-llm   ollama (+ ollama-pull): the gateway's local fallback and the "local" preset
-#   admin       admin: python -m store.admin (provider keys, profiles, presets)
+#   admin       admin: python -m store.admin (provider keys, profiles, presets, teams, runs)
+#   mcp-example a minimal MCP server to prove a connection (docs/mcp.md)
 #
 # ── Secret store ────────────────────────────────────────────────────────────
 #   VANGUARD_SECRET_BACKEND=local   provider keys Fernet-encrypted in Postgres (VANGUARD_CREDENTIALS_KEY)
@@ -104,6 +105,9 @@ x-worker-env: &worker-env
   AAP_MCP_URL: ${AAP_MCP_URL:-}
   KNOWLEDGE_MCP_URL: ${KNOWLEDGE_MCP_URL:-}
   VANGUARD_KNOWLEDGE_TOKEN: ${VANGUARD_KNOWLEDGE_TOKEN:-}
+  # Any other MCP server, declared (docs/mcp.md): a JSON list, or a file under config/mcp/
+  ENGINE_MCP_SERVERS: ${ENGINE_MCP_SERVERS:-}
+  ENGINE_MCP_SERVERS_FILE: ${ENGINE_MCP_SERVERS_FILE:-}
 
 networks:
   # Fixed subnets inside 172.29.0.0/16 (vanguard-control uses 172.28/16, vault-transit-stack 172.30/16).
@@ -326,6 +330,12 @@ services:
     container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-worker-agents
     <<: *service
     networks: [engine-agents-net, engine-data-net]   # no egress: models via the gateway
+    # Only the MCP servers' tokens (auth.type bearer_env), never the project's .env
+    env_file:
+      - path: ./config/mcp/tokens.env
+        required: false
+    volumes:
+      - ./config/mcp:/app/config/mcp:ro
     environment:
       <<: *worker-env
       AGENT_ROLES: ${ENGINE_AGENT_ROLES:-documentalist}
@@ -360,6 +370,31 @@ services:
       test: ["CMD-SHELL", "case $${AGENT_ROLES} in *,*) for r in $$(echo $${AGENT_ROLES} | tr , ' '); do curl -sf http://localhost:$${WORKER_PORT}/$$r/.well-known/agent-card.json > /dev/null || exit 1; done ;; *) curl -sf http://localhost:$${WORKER_PORT}/.well-known/agent-card.json > /dev/null ;; esac"]
       <<: *hc-timing
       start_period: 30s
+
+  # ── MCP example (profile "mcp-example", docs/mcp.md) ─────────────────────────
+  # A minimal MCP server on the agents network, to prove a connection: echo, utc_now, whoami, and
+  # delete_everything (left out of the allowlist). With ENGINE_MCP_SERVERS_FILE=
+  # /app/config/mcp/servers.example.json the documentalist gets its tools.
+  mcp-example:
+    image: ${ENGINE_IMAGE_PREFIX:-agent-engine}/worker:${ENGINE_IMAGE_TAG:-latest}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-mcp-example
+    profiles: ["mcp-example"]
+    <<: *service
+    entrypoint: ["python", "/app/examples/mcp-example/server.py"]
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [engine-agents-net]
+    env_file:
+      - path: ./config/mcp/tokens.env
+        required: false
+    volumes:
+      - ./examples:/app/examples:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 2)"]
+      <<: *hc-timing
+      start_period: 10s
 
   # ── Admin CLI (profile "admin") ─────────────────────────────────────────────
   # docker compose --profile admin run --rm admin status
