@@ -1,0 +1,18 @@
+# Agent engine — base image requirements (gateway and workers).
+# Extracted from vanguard-control's agents/base/requirements.txt.
+
+google-adk>=1.0.0,<3.0
+# mcp 1.24.0 added streamable_http_client, imported by google-adk 2.9.2 at load time.
+mcp>=1.24.0,<2
+pydantic>=2.10.0,<3
+fastapi>=0.115.0,<1
+uvicorn[standard]>=0.30.0,<1
+pyyaml>=6.0.2
+httpx>=0.27,<1                    # the gateway's provider client
+# A2A worker server + client (to_a2a, DatabaseTaskStore on Postgres)
+a2a-sdk[http-server,postgresql]>=1.0,<2
+sqlalchemy[asyncio]>=2.0.0,<2.1   # tests run on 2.0.x; keep images on the same minor
+asyncpg>=0.29.0,<1
+# Shared RPM budget, breakers and limits across gateway replicas and workers (orchestrator/ratelimit.py)
+valkey>=6.0.0,<7
+cryptography>=46,<52              # Fernet credentials (orchestrator.credentials)
