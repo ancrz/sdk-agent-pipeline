@@ -1,23 +1,10 @@
-# Python
-.venv/
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-dist/
-build/
-
-# Environment
 .env
-
-# IDE
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.claude/
+.DS_Store
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# Docs
-docs/
-
-# ADK Runtime
-.adk/
