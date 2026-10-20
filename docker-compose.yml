@@ -1,0 +1,468 @@
+---
+# Agent Engine — Docker Compose.
+#
+# Everything environment-specific comes from .env (template: .env.example; scripts/bootstrap_env.py
+# generates the tokens and passwords). Secrets have no defaults and fail fast if unset.
+#
+# Build the images with scripts/build.sh (base → gateway → worker).
+#
+# ── Start-up order ──────────────────────────────────────────────────────────
+#   1. postgres (source of truth), valkey (shared RPM slots, breakers, limits)
+#   2. schema          — one-shot: tables, schema adk, a2a_tasks, presets, prices
+#   3. model-gateway   — two replicas behind one DNS name (model-gateway-ha)
+#   4. worker-agents   — one process, one ADK agent per role under /<role>/ (A2A); models only
+#                        through the gateway, each role with its own gateway token
+#
+# ── Profiles ────────────────────────────────────────────────────────────────
+#   (none)      postgres, valkey, schema, model-gateway ×2, worker-agents (AGENT_ROLES, default
+#               documentalist). executor, validator, medic and author act through an Ansible
+#               Controller's MCP front: add them to ENGINE_AGENT_ROLES with AAP_MCP_URL set.
+#   local-llm   ollama (+ ollama-pull): the gateway's local fallback and the "local" preset
+#   admin       admin: python -m store.admin (provider keys, profiles, presets, teams, runs)
+#   mcp-example a minimal MCP server to prove a connection (docs/mcp.md)
+#
+# ── Secret store ────────────────────────────────────────────────────────────
+#   ENGINE_SECRET_BACKEND=local   provider keys Fernet-encrypted in Postgres (ENGINE_CREDENTIALS_KEY)
+#   ENGINE_SECRET_BACKEND=openbao add docker-compose.openbao.yml (COMPOSE_FILE in .env): the gateway
+#                                   and the admin join vault-transit-stack's secrets network with
+#                                   their own AppRoles (gateway reads, writer writes).
+#
+# ── Network topology ────────────────────────────────────────────────────────
+# engine-agents-net  (internal) : workers ↔ gateway; consumers join it (external) to reach both
+# engine-data-net    (internal) : postgres, valkey ↔ schema, gateway, workers, admin
+# engine-egress-net             : the gateway's way to the model providers (the only one out)
+# engine-llm-net     (internal) : the gateway ↔ ollama (profile local-llm)
+# engine-llm-pull-net           : ollama-pull's way to model registries
+
+x-service: &service
+  restart: ${ENGINE_RESTART_POLICY:-unless-stopped}
+  logging:
+    driver: json-file
+    options:
+      max-size: ${ENGINE_LOG_MAX_SIZE:-10m}
+      max-file: "${ENGINE_LOG_MAX_FILE:-5}"
+
+x-healthcheck-timing: &hc-timing
+  interval: ${HEALTHCHECK_INTERVAL:-10s}
+  timeout: ${HEALTHCHECK_TIMEOUT:-5s}
+  retries: ${HEALTHCHECK_RETRIES:-5}
+
+x-db-env: &db-env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  POSTGRES_DB: ${POSTGRES_DB:-engine}
+  POSTGRES_USER: ${POSTGRES_USER:-engine}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+
+x-valkey-env: &valkey-env
+  VALKEY_HOST: valkey
+  VALKEY_PORT: ${VALKEY_PORT:-6379}
+  VALKEY_PASSWORD: ${VALKEY_PASSWORD:?set VALKEY_PASSWORD in .env}
+
+# Secret backend shared by the gateway and the admin (orchestrator/secrets.py).
+x-secret-env: &secret-env
+  ENGINE_SECRET_BACKEND: ${ENGINE_SECRET_BACKEND:-local}
+  ENGINE_CREDENTIALS_KEY: ${ENGINE_CREDENTIALS_KEY:-}
+  BAO_ADDR: ${ENGINE_BAO_ADDR:-https://openbao-secrets:8200}   # vault-transit-stack's secrets-network alias
+  ENGINE_BAO_CONSUMER_DIR: /run/engine/openbao
+  ENGINE_BAO_MOUNTS: ${ENGINE_BAO_MOUNTS:-{"model_provider":"agent-ai"}}
+
+# ── Shared worker environment ───────────────────────────────────────────────
+# No env_file on any worker: no provider key, no admin token, no database owner beyond the
+# A2A task and ADK session tables. List every worker variable here explicitly.
+x-worker-env: &worker-env
+  # google-genai sends GOOGLE_API_KEY (here the worker's own gateway token, set per service)
+  # to GOOGLE_GEMINI_BASE_URL. The provider key lives only in the gateway.
+  GOOGLE_GENAI_USE_VERTEXAI: "FALSE"
+  # ADK tries Google mTLS (a GCE metadata probe, ~3 s, under a lock) for every new MCP
+  # session; it serialized node starts. Our MCP servers are internal plain HTTP.
+  GOOGLE_API_USE_CLIENT_CERTIFICATE: "false"
+  NO_GCE_CHECK: "true"
+  GOOGLE_GENAI_PAID_API_KEY: ${GOOGLE_GENAI_PAID_API_KEY:-FALSE}
+  GOOGLE_GEMINI_BASE_URL: ${MODEL_GATEWAY_URL:-http://model-gateway-ha:${MODEL_GATEWAY_PORT:-8095}}
+  # Every model call goes to the gateway; its active preset (offline, demo-free, paid, custom,
+  # local) decides the provider, so a switch needs no restart here.
+  ENGINE_MODEL_ROUTING: gateway
+  ENGINE_MODEL_EXECUTOR: ${ENGINE_MODEL_EXECUTOR:-}
+  ENGINE_MODEL_VALIDATOR: ${ENGINE_MODEL_VALIDATOR:-}
+  ENGINE_MODEL_DOCUMENTALIST: ${ENGINE_MODEL_DOCUMENTALIST:-}
+  ENGINE_MODEL_AUTHOR: ${ENGINE_MODEL_AUTHOR:-}
+  ENGINE_MODEL_MEDIC: ${ENGINE_MODEL_MEDIC:-}
+  ENGINE_DEFAULT_MODEL: ${ENGINE_DEFAULT_MODEL:-gemini-3.5-flash-lite}
+  ENGINE_FALLBACK_MODEL: ${ENGINE_FALLBACK_MODEL:-}
+  # gemini | deterministic (fixed procedure instead of the model; tools stay real)
+  ENGINE_LLM_MODE: ${ENGINE_LLM_MODE:-gemini}
+  ENGINE_DETERMINISTIC_POLL_S: ${ENGINE_DETERMINISTIC_POLL_S:-0.25}
+  ENGINE_RPM_LIMIT: ${ENGINE_RPM_LIMIT:-auto}
+  ENGINE_RPM_FLASH: ${ENGINE_RPM_FLASH:-10}
+  ENGINE_RPM_PRO: ${ENGINE_RPM_PRO:-2}
+  <<: [*valkey-env, *db-env]
+  WORKER_PORT: ${WORKER_PORT:-8080}
+  # Tool fronts (optional): an Ansible Controller's MCP (automation roles) and a read-only
+  # knowledge MCP; both come from the consuming project.
+  AAP_MCP_URL: ${AAP_MCP_URL:-}
+  KNOWLEDGE_MCP_URL: ${KNOWLEDGE_MCP_URL:-}
+  ENGINE_KNOWLEDGE_TOKEN: ${ENGINE_KNOWLEDGE_TOKEN:-}
+  # Any other MCP server, declared (docs/mcp.md): a JSON list, or a file under config/mcp/
+  ENGINE_MCP_SERVERS: ${ENGINE_MCP_SERVERS:-}
+  ENGINE_MCP_SERVERS_FILE: ${ENGINE_MCP_SERVERS_FILE:-}
+
+networks:
+  # Fixed subnets inside 172.29.0.0/16 (vault-transit-stack uses 172.30/16).
+  engine-agents-net:
+    name: ${ENGINE_AGENTS_NETWORK_NAME:-engine-agents-net}
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${ENGINE_AGENTS_SUBNET:-172.29.43.0/24}
+  engine-data-net:
+    name: ${ENGINE_DATA_NETWORK_NAME:-engine-data-net}
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${ENGINE_DATA_SUBNET:-172.29.44.0/24}
+  engine-egress-net:
+    name: ${ENGINE_EGRESS_NETWORK_NAME:-engine-egress-net}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${ENGINE_EGRESS_SUBNET:-172.29.40.0/24}
+  engine-llm-net:
+    name: ${ENGINE_LLM_NETWORK_NAME:-engine-llm-net}
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: ${ENGINE_LLM_SUBNET:-172.29.45.0/24}
+  engine-llm-pull-net:
+    name: ${ENGINE_LLM_PULL_NETWORK_NAME:-engine-llm-pull-net}
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${ENGINE_LLM_PULL_SUBNET:-172.29.46.0/24}
+
+volumes:
+  postgres_data:
+    name: ${POSTGRES_VOLUME_NAME:-agent_engine_postgres_data}
+  ollama_models:
+    name: ${OLLAMA_VOLUME_NAME:-agent_engine_ollama_models}
+
+services:
+  # ── 1. Sources of truth ─────────────────────────────────────────────────────
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-postgres
+    <<: *service
+    command: ["postgres", "-c", "port=${POSTGRES_PORT:-5432}"]
+    networks: [engine-data-net]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-engine}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-engine}
+      TZ: ${ENGINE_TIMEZONE:-UTC}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: ${POSTGRES_MEM_LIMIT:-512m}
+          cpus: "${POSTGRES_CPU_LIMIT:-1.0}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-engine} -d ${POSTGRES_DB:-engine} -p ${POSTGRES_PORT:-5432}"]
+      <<: *hc-timing
+      start_period: 30s
+
+  # Shared state of the gateway replicas and the workers: RPM slots, breakers, daily counters,
+  # local-model pull jobs. Short-lived keys with TTL; nothing is persisted.
+  valkey:
+    image: ${VALKEY_IMAGE:-valkey/valkey:8-alpine}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-valkey
+    <<: *service
+    command: >-
+      valkey-server --port ${VALKEY_PORT:-6379} --requirepass "${VALKEY_PASSWORD:?set VALKEY_PASSWORD in .env}"
+      --maxmemory ${VALKEY_MAXMEMORY:-128mb} --maxmemory-policy volatile-lfu --save "" --appendonly no
+    networks: [engine-data-net]
+    deploy:
+      resources:
+        limits:
+          memory: ${VALKEY_MEM_LIMIT:-192m}
+          cpus: "${VALKEY_CPU_LIMIT:-0.5}"
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -p ${VALKEY_PORT:-6379} -a \"$${VALKEY_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
+      <<: *hc-timing
+      start_period: 10s
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:?set VALKEY_PASSWORD in .env}
+
+  # ── 2. Schema (one-shot) ────────────────────────────────────────────────────
+
+  schema:
+    image: ${ENGINE_IMAGE_PREFIX:-agent-engine}/model-gateway:${ENGINE_IMAGE_TAG:-latest}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-schema
+    command: ["python", "-m", "store.schema"]
+    restart: "no"
+    networks: [engine-data-net]
+    environment:
+      <<: *db-env
+      ENGINE_LLM_MODE: ${ENGINE_LLM_MODE:-gemini}   # deterministic → the offline preset is seeded active
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── 3. Model gateway (HA: two replicas, one name) ───────────────────────────
+
+  model-gateway:
+    build:
+      context: .
+      dockerfile: model_gateway/Dockerfile
+      args:
+        BASE_IMAGE: ${ENGINE_IMAGE_PREFIX:-agent-engine}/base:${ENGINE_IMAGE_TAG:-latest}
+        MODEL_GATEWAY_PORT: ${MODEL_GATEWAY_PORT:-8095}
+    image: ${ENGINE_IMAGE_PREFIX:-agent-engine}/model-gateway:${ENGINE_IMAGE_TAG:-latest}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-model-gateway
+    <<: *service
+    networks:
+      engine-egress-net: {}       # egress to the model providers (the only agent-side path out)
+      engine-llm-net: {}          # the local model server (profile local-llm), no egress
+      engine-agents-net:          # workers and consumers call it; no host port
+        aliases: [model-gateway-ha]   # both replicas answer this name
+      engine-data-net: {}         # Postgres: profiles, credentials, call audit; Valkey: shared state
+    # No env_file: only what the gateway needs.
+    environment:
+      <<: [*secret-env, *db-env, *valkey-env]
+      MODEL_GATEWAY_PORT: ${MODEL_GATEWAY_PORT:-8095}
+      MODEL_GATEWAY_WORKERS: ${MODEL_GATEWAY_WORKERS:-1}   # uvicorn processes per replica
+      # Provider endpoints (empty = the provider's public URL): proxies, regional endpoints
+      ENGINE_GEMINI_UPSTREAM: ${ENGINE_GEMINI_UPSTREAM:-}
+      ENGINE_PROVIDER_URL_OPENAI: ${ENGINE_PROVIDER_URL_OPENAI:-}
+      ENGINE_PROVIDER_URL_DEEPSEEK: ${ENGINE_PROVIDER_URL_DEEPSEEK:-}
+      ENGINE_PROVIDER_URL_ANTHROPIC: ${ENGINE_PROVIDER_URL_ANTHROPIC:-}
+      ENGINE_NOTIFY_GROUP_S: ${ENGINE_NOTIFY_GROUP_S:-3600}
+      # The .env route, used when no profile matches (resolution: profile → default profile → .env)
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      ENGINE_DEFAULT_MODEL: ${ENGINE_DEFAULT_MODEL:-gemini-3.5-flash-lite}
+      ENGINE_FALLBACK_MODEL: ${ENGINE_FALLBACK_MODEL:-}
+      ENGINE_MODEL_ORCHESTRATOR: ${ENGINE_MODEL_ORCHESTRATOR:-}
+      ENGINE_MODEL_EXECUTOR: ${ENGINE_MODEL_EXECUTOR:-}
+      ENGINE_MODEL_VALIDATOR: ${ENGINE_MODEL_VALIDATOR:-}
+      ENGINE_MODEL_DOCUMENTALIST: ${ENGINE_MODEL_DOCUMENTALIST:-}
+      ENGINE_MODEL_AUTHOR: ${ENGINE_MODEL_AUTHOR:-}
+      ENGINE_MODEL_MEDIC: ${ENGINE_MODEL_MEDIC:-}
+      ENGINE_EMBEDDING_MODEL: ${ENGINE_EMBEDDING_MODEL:-gemini-embedding-001}
+      # One token per caller role; the role (and so the model) is derived from the token.
+      # orchestrator = the consuming application's chat/planner (the "superior" model).
+      ENGINE_GATEWAY_TOKEN_ORCHESTRATOR: ${ENGINE_GATEWAY_TOKEN_ORCHESTRATOR:?set ENGINE_GATEWAY_TOKEN_ORCHESTRATOR in .env}
+      ENGINE_GATEWAY_TOKEN_EXECUTOR: ${ENGINE_GATEWAY_TOKEN_EXECUTOR:?set ENGINE_GATEWAY_TOKEN_EXECUTOR in .env}
+      ENGINE_GATEWAY_TOKEN_VALIDATOR: ${ENGINE_GATEWAY_TOKEN_VALIDATOR:?set ENGINE_GATEWAY_TOKEN_VALIDATOR in .env}
+      ENGINE_GATEWAY_TOKEN_DOCUMENTALIST: ${ENGINE_GATEWAY_TOKEN_DOCUMENTALIST:?set ENGINE_GATEWAY_TOKEN_DOCUMENTALIST in .env}
+      ENGINE_GATEWAY_TOKEN_AUTHOR: ${ENGINE_GATEWAY_TOKEN_AUTHOR:?set ENGINE_GATEWAY_TOKEN_AUTHOR in .env}
+      ENGINE_GATEWAY_TOKEN_MEDIC: ${ENGINE_GATEWAY_TOKEN_MEDIC:?set ENGINE_GATEWAY_TOKEN_MEDIC in .env}
+      ENGINE_GATEWAY_TOKEN_EMBEDDINGS: ${ENGINE_GATEWAY_TOKEN_EMBEDDINGS:?set ENGINE_GATEWAY_TOKEN_EMBEDDINGS in .env}
+      ENGINE_GATEWAY_ADMIN_TOKEN: ${ENGINE_GATEWAY_ADMIN_TOKEN:?set ENGINE_GATEWAY_ADMIN_TOKEN in .env}
+      # The offline preset runs the deterministic stand-in here (worker polling cadence).
+      ENGINE_DETERMINISTIC_POLL_S: ${ENGINE_DETERMINISTIC_POLL_S:-0.25}
+      ENGINE_LOCAL_MODEL_TIMEOUT_S: ${ENGINE_LOCAL_MODEL_TIMEOUT_S:-600}
+      ENGINE_LOCAL_REASONING: ${ENGINE_LOCAL_REASONING:-none}
+      ENGINE_LOCAL_DETERMINISTIC_ROLES: ${ENGINE_LOCAL_DETERMINISTIC_ROLES-executor,validator}
+      ENGINE_OLLAMA_URL: ${ENGINE_OLLAMA_URL:-http://ollama:11434}
+      ENGINE_OLLAMA_PULL_URL: ${ENGINE_OLLAMA_PULL_URL:-http://ollama-pull:11434}
+      # Limits (0 or empty = unlimited). RPM per account and model: profile rpm → per role →
+      # global → tier default (free/paid). Slots shared through Valkey; bounded wait, then 429.
+      ENGINE_GATEWAY_MAX_WAIT_S: ${ENGINE_GATEWAY_MAX_WAIT_S:-30}
+      ENGINE_GATEWAY_RPM_FREE: ${ENGINE_GATEWAY_RPM_FREE:-10}
+      ENGINE_GATEWAY_RPM_PAID: ${ENGINE_GATEWAY_RPM_PAID:-0}
+      ENGINE_GATEWAY_RPD_FREE: ${ENGINE_GATEWAY_RPD_FREE:-0}
+      ENGINE_GATEWAY_RPD_PAID: ${ENGINE_GATEWAY_RPD_PAID:-0}
+      ENGINE_GATEWAY_RPM: ${ENGINE_GATEWAY_RPM:-}
+      ENGINE_GATEWAY_DAILY_TOKENS: ${ENGINE_GATEWAY_DAILY_TOKENS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+      valkey:
+        condition: service_healthy   # breakers, limits and pull jobs shared by the replicas
+        restart: true
+      schema:
+        condition: service_completed_successfully
+      ollama:                         # profile local-llm: the local fallback ready before calls
+        condition: service_healthy
+        required: false
+    deploy:
+      resources:
+        limits:
+          memory: ${MODEL_GATEWAY_MEM_LIMIT:-192m}
+          cpus: "${MODEL_GATEWAY_CPU_LIMIT:-1.0}"   # measured: 0.5 → 1.0 doubles throughput; 2.0 adds nothing
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:$${MODEL_GATEWAY_PORT}/healthz"]
+      <<: *hc-timing
+      start_period: 10s
+
+  # Second replica: the same gateway; both answer model-gateway-ha on the agents network, the
+  # name every client uses. Docker's DNS returns only running containers, so with one replica
+  # down every call still finds the other. Breakers, limits and local-model downloads are
+  # shared through Valkey; nothing else is kept between calls.
+  model-gateway-b:
+    extends:
+      service: model-gateway
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-model-gateway-b
+    networks:
+      engine-agents-net:
+        aliases: [model-gateway-ha]
+
+  # ── 4. A2A workers ──
+  # With several roles each answers under /<role>/ (its AgentCard at /<role>/.well-known/
+  # agent-card.json) and /healthz lists them; with one role it is served at the root. Each model request carries that role's own gateway token, so the
+  # gateway still tells roles apart (model, limits, accounting).
+  worker-agents:
+    build:
+      context: .
+      dockerfile: workers/Dockerfile
+      args:
+        BASE_IMAGE: ${ENGINE_IMAGE_PREFIX:-agent-engine}/base:${ENGINE_IMAGE_TAG:-latest}
+        ROLE: ""
+        WORKER_PORT: ${WORKER_PORT:-8080}
+    image: ${ENGINE_IMAGE_PREFIX:-agent-engine}/worker:${ENGINE_IMAGE_TAG:-latest}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-worker-agents
+    <<: *service
+    networks: [engine-agents-net, engine-data-net]   # no egress: models via the gateway
+    # Only the MCP servers' tokens (auth.type bearer_env), never the project's .env
+    env_file:
+      - path: ./config/mcp/tokens.env
+        required: false
+    volumes:
+      - ./config/mcp:/app/config/mcp:ro
+    environment:
+      <<: *worker-env
+      AGENT_ROLES: ${ENGINE_AGENT_ROLES:-documentalist}
+      AGENT_PUBLIC_HOST: ${ENGINE_WORKER_PUBLIC_HOST:-worker-agents}
+      GOOGLE_API_KEY: per-role-token-required
+      ENGINE_GATEWAY_TOKEN_EXECUTOR: ${ENGINE_GATEWAY_TOKEN_EXECUTOR:?set ENGINE_GATEWAY_TOKEN_EXECUTOR in .env}
+      ENGINE_GATEWAY_TOKEN_VALIDATOR: ${ENGINE_GATEWAY_TOKEN_VALIDATOR:?set ENGINE_GATEWAY_TOKEN_VALIDATOR in .env}
+      ENGINE_GATEWAY_TOKEN_DOCUMENTALIST: ${ENGINE_GATEWAY_TOKEN_DOCUMENTALIST:?set ENGINE_GATEWAY_TOKEN_DOCUMENTALIST in .env}
+      ENGINE_GATEWAY_TOKEN_AUTHOR: ${ENGINE_GATEWAY_TOKEN_AUTHOR:?set ENGINE_GATEWAY_TOKEN_AUTHOR in .env}
+      ENGINE_GATEWAY_TOKEN_MEDIC: ${ENGINE_GATEWAY_TOKEN_MEDIC:?set ENGINE_GATEWAY_TOKEN_MEDIC in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+        restart: true
+      valkey:
+        condition: service_healthy
+        restart: true
+      schema:
+        condition: service_completed_successfully
+      model-gateway:
+        condition: service_healthy
+      model-gateway-b:
+        condition: service_healthy
+        required: false
+    deploy:
+      resources:
+        limits:
+          memory: ${WORKER_AGENTS_MEM_LIMIT:-1g}
+          cpus: "${WORKER_AGENTS_CPU_LIMIT:-2}"
+    healthcheck:
+      # one role is served at the root; several each under /<role>/: every role's card must answer
+      test: ["CMD-SHELL", "case $${AGENT_ROLES} in *,*) for r in $$(echo $${AGENT_ROLES} | tr , ' '); do curl -sf http://localhost:$${WORKER_PORT}/$$r/.well-known/agent-card.json > /dev/null || exit 1; done ;; *) curl -sf http://localhost:$${WORKER_PORT}/.well-known/agent-card.json > /dev/null ;; esac"]
+      <<: *hc-timing
+      start_period: 30s
+
+  # ── MCP example (profile "mcp-example", docs/mcp.md) ─────────────────────────
+  # A minimal MCP server on the agents network, to prove a connection: echo, utc_now, whoami, and
+  # delete_everything (left out of the allowlist). With ENGINE_MCP_SERVERS_FILE=
+  # /app/config/mcp/servers.example.json the documentalist gets its tools.
+  mcp-example:
+    image: ${ENGINE_IMAGE_PREFIX:-agent-engine}/worker:${ENGINE_IMAGE_TAG:-latest}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-mcp-example
+    profiles: ["mcp-example"]
+    <<: *service
+    entrypoint: ["python", "/app/examples/mcp-example/server.py"]
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [engine-agents-net]
+    env_file:
+      - path: ./config/mcp/tokens.env
+        required: false
+    volumes:
+      - ./examples:/app/examples:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 2)"]
+      <<: *hc-timing
+      start_period: 10s
+
+  # ── Admin CLI (profile "admin") ─────────────────────────────────────────────
+  # docker compose --profile admin run --rm admin status
+  admin:
+    image: ${ENGINE_IMAGE_PREFIX:-agent-engine}/model-gateway:${ENGINE_IMAGE_TAG:-latest}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-admin
+    profiles: ["admin"]
+    entrypoint: ["python", "-m", "store.admin"]
+    restart: "no"
+    networks: [engine-data-net]
+    environment:
+      <<: [*secret-env, *db-env]
+    depends_on:
+      schema:
+        condition: service_completed_successfully
+
+  # ── Local model (profile "local-llm") ──────────────────────────────────────
+  # Ollama on CPU: the gateway's fallback when a cloud provider is unreachable, and the
+  # "local" preset. Only the gateway can reach it; it has no internet.
+  ollama:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.35.0}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-ollama
+    profiles: ["local-llm"]
+    <<: *service
+    read_only: true
+    tmpfs: ["/tmp:size=64m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [engine-llm-net]
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-30m}
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-1}
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:-16384}
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_MEM_LIMIT:-12g}
+          cpus: "${OLLAMA_CPU_LIMIT:-4}"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      <<: *hc-timing
+      start_period: 20s
+
+  # Downloads and deletes models in the shared volume when an admin asks (through the
+  # gateway's admin API). Never serves inference.
+  ollama-pull:
+    image: ${OLLAMA_IMAGE:-ollama/ollama:0.35.0}
+    container_name: ${ENGINE_CONTAINER_PREFIX:-engine}-ollama-pull
+    profiles: ["local-llm"]
+    <<: *service
+    read_only: true
+    tmpfs: ["/tmp:size=64m"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [engine-llm-net, engine-llm-pull-net]
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_MAX_LOADED_MODELS: "1"
+    deploy:
+      resources:
+        limits:
+          memory: ${OLLAMA_PULL_MEM_LIMIT:-1g}
+          cpus: "1"
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      <<: *hc-timing
+      start_period: 20s

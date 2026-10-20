@@ -1,0 +1,37 @@
+---
+# Overlay: provider keys in OpenBao (vault-transit-stack) instead of Fernet in Postgres.
+#
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.openbao.yml   (in .env)
+#   ENGINE_SECRET_BACKEND=openbao
+#   VAULT_STACK_DIR=../vault-transit-stack
+#
+# vault-transit-stack's default config/consumers.json declares exactly what this needs: the
+# kv-v2 mount agent-ai/, the AppRole "gateway" (reads it) and "writer" (writes, never reads).
+# Each service mounts only its own AppRole directory and joins the store's secrets network,
+# the subnet those AppRoles are bound to.
+
+x-bao-gateway: &bao-gateway
+  group_add: ["${HOST_GID:-1000}"]          # reads its AppRole files (mode 640, the host group)
+  volumes:
+    - ${VAULT_STACK_DIR:-../vault-transit-stack}/secrets/consumers/gateway:/run/engine/openbao:ro
+
+services:
+  model-gateway:
+    <<: *bao-gateway
+    networks:
+      bao-secrets: {}
+  model-gateway-b:
+    <<: *bao-gateway
+    networks:
+      bao-secrets: {}
+  admin:
+    group_add: ["${HOST_GID:-1000}"]
+    volumes:
+      - ${VAULT_STACK_DIR:-../vault-transit-stack}/secrets/consumers/writer:/run/engine/openbao:ro
+    networks:
+      bao-secrets: {}
+
+networks:
+  bao-secrets:
+    external: true
+    name: ${BAO_SECRETS_NETWORK_NAME:-bao-secrets-net}

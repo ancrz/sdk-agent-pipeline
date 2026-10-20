@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.claude/
+.DS_Store
+.vscode/
+.idea/
+config/mcp/tokens.env
+config/mcp/servers.json

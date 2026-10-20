@@ -1,0 +1,16 @@
+SDK Agent Pipeline — Agent Engine
+Copyright 2026 ancrz (https://github.com/ancrz)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It includes data derived from third-party work:
+
+- store/prices/litellm_prices.json: model prices reduced from LiteLLM's
+  model_prices_and_context_window.json (https://github.com/BerriAI/litellm),
+  Copyright (c) 2023 Berri AI, licensed under the MIT License.
+
+It runs on, without including, third-party software under their own licenses, among them:
+Google Agent Development Kit and a2a-sdk (Apache-2.0), the Model Context Protocol Python SDK
+(MIT), FastAPI (MIT), SQLAlchemy (MIT), httpx (BSD-3-Clause), uvicorn (BSD-3-Clause),
+valkey-py (MIT), asyncpg (Apache-2.0), cryptography (Apache-2.0 or BSD-3-Clause), and the
+container images PostgreSQL (PostgreSQL License), Valkey (BSD-3-Clause) and Ollama (MIT).

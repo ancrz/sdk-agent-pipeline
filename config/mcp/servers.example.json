@@ -1,0 +1,10 @@
+[
+  {
+    "name": "example",
+    "url": "http://mcp-example:8000/mcp",
+    "roles": ["documentalist"],
+    "tools": ["echo", "utc_now", "whoami"],
+    "auth": { "type": "bearer_env", "env": "EXAMPLE_MCP_TOKEN", "forward_worker_token": "X-Engine-Worker-Token" },
+    "note": "Use them to check the connection: echo returns its text, whoami says which credentials arrived."
+  }
+]

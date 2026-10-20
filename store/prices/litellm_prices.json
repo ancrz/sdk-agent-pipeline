@@ -1,0 +1,1719 @@
+{
+ "source": "litellm",
+ "as_of": "2026-10-09",
+ "unit": "USD per 1M tokens",
+ "prices": [
+  {
+   "provider": "anthropic",
+   "model": "claude-fable-5",
+   "input": 10.0,
+   "output": 50.0,
+   "cached": 1.0,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-fable-5-1",
+   "input": 10.0,
+   "output": 50.0,
+   "cached": 0.25,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-haiku-4-5",
+   "input": 1.0,
+   "output": 5.0,
+   "cached": 0.1,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-haiku-4-5-20251001",
+   "input": 1.0,
+   "output": 5.0,
+   "cached": 0.1,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-haiku-5-5",
+   "input": 0.1,
+   "output": 0.5,
+   "cached": 0.01,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-mythos-5",
+   "input": 10.0,
+   "output": 50.0,
+   "cached": 1.0,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-mythos-5-1",
+   "input": 10.0,
+   "output": 50.0,
+   "cached": 0.25,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-mythos-preview",
+   "input": 10.0,
+   "output": 50.0,
+   "cached": 1.0,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-4-5",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-4-5-20251101",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-4-6",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-4-6-20260205",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-4-7",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-4-7-20260416",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-4-8",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-5",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-opus-5-5",
+   "input": 4.0,
+   "output": 20.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-sonnet-4-5",
+   "input": 3.0,
+   "output": 15.0,
+   "cached": 0.3,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-sonnet-4-5-20250929",
+   "input": 3.0,
+   "output": 15.0,
+   "cached": 0.3,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-sonnet-4-6",
+   "input": 3.0,
+   "output": 15.0,
+   "cached": 0.3,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-sonnet-5",
+   "input": 2.0,
+   "output": 10.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "anthropic",
+   "model": "claude-sonnet-5-5",
+   "input": 2.0,
+   "output": 10.0,
+   "cached": 0.1,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-chat",
+   "input": 0.28,
+   "output": 0.42,
+   "cached": 0.028,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-coder",
+   "input": 0.14,
+   "output": 0.28,
+   "cached": 0.014,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-flash",
+   "input": 0.3,
+   "output": 1.2,
+   "cached": 0.006,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-r1",
+   "input": 0.55,
+   "output": 2.19,
+   "cached": 0.14,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-reasoner",
+   "input": 0.28,
+   "output": 0.42,
+   "cached": 0.028,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-v3",
+   "input": 0.27,
+   "output": 1.1,
+   "cached": 0.07,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-v3.2",
+   "input": 0.28,
+   "output": 0.4,
+   "cached": 0.028,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-v4-flash",
+   "input": 0.3,
+   "output": 1.2,
+   "cached": 0.006,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-v4-flash-vision-exp",
+   "input": 0.3,
+   "output": 1.2,
+   "cached": 0.006,
+   "thinking": null
+  },
+  {
+   "provider": "deepseek",
+   "model": "deepseek-v4-pro",
+   "input": 1.32,
+   "output": 3.96,
+   "cached": 0.044,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "deep-research-max-preview-04-2026",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "deep-research-preview-04-2026",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "deep-research-pro-preview-12-2025",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-2.5-computer-use-preview-10-2025",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-2.5-flash",
+   "input": 0.3,
+   "output": 2.5,
+   "cached": 0.03,
+   "thinking": 2.5
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-2.5-flash-lite",
+   "input": 0.1,
+   "output": 0.4,
+   "cached": 0.01,
+   "thinking": 0.4
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-2.5-pro",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-2.5-pro-preview-tts",
+   "input": 1.0,
+   "output": 20.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3-flash-preview",
+   "input": 0.5,
+   "output": 3.0,
+   "cached": 0.05,
+   "thinking": 3.0
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.1-flash-lite",
+   "input": 0.25,
+   "output": 1.5,
+   "cached": 0.025,
+   "thinking": 1.5
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.1-flash-lite-preview",
+   "input": 0.25,
+   "output": 1.5,
+   "cached": 0.025,
+   "thinking": 1.5
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.1-pro-preview",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.1-pro-preview-customtools",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.5-flash",
+   "input": 1.5,
+   "output": 9.0,
+   "cached": 0.15,
+   "thinking": 9.0
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.5-flash-lite",
+   "input": 0.3,
+   "output": 2.5,
+   "cached": 0.03,
+   "thinking": 2.5
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.6-flash",
+   "input": 0.75,
+   "output": 3.75,
+   "cached": 0.075,
+   "thinking": 3.75
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.7-flash",
+   "input": 0.75,
+   "output": 3.75,
+   "cached": 0.075,
+   "thinking": 3.75
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-3.8-flash",
+   "input": 0.75,
+   "output": 3.75,
+   "cached": 0.075,
+   "thinking": 3.75
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-embedding-001",
+   "input": 0.15,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-embedding-2",
+   "input": 0.2,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-embedding-2-preview",
+   "input": 0.2,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-exp-1114",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-exp-1206",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-flash-latest",
+   "input": 0.75,
+   "output": 3.75,
+   "cached": 0.075,
+   "thinking": 3.75
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-flash-lite-latest",
+   "input": 0.3,
+   "output": 2.5,
+   "cached": 0.03,
+   "thinking": 2.5
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-gemma-2-27b-it",
+   "input": 0.35,
+   "output": 1.05,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-gemma-2-9b-it",
+   "input": 0.35,
+   "output": 1.05,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-omni-1.1-flash",
+   "input": 1.5,
+   "output": 9.0,
+   "cached": null,
+   "thinking": 9.0
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-omni-flash-preview",
+   "input": 1.5,
+   "output": 9.0,
+   "cached": null,
+   "thinking": 9.0
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-pro-latest",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-robotics-er-2-preview",
+   "input": 1.0,
+   "output": 5.0,
+   "cached": 0.1,
+   "thinking": 5.0
+  },
+  {
+   "provider": "gemini",
+   "model": "gemini-robotics-er-2-streaming-preview",
+   "input": 1.0,
+   "output": 5.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemma-3-27b-it",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemma-4-26b-a4b-it",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "gemma-4-31b-it",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "learnlm-1.5-pro-experimental",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "lyria-3-clip-preview",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "lyria-3-pro-preview",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "lyria-3.5",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "lyria-3.5-clip-preview",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "lyria-3.5-pro-preview",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "gemini",
+   "model": "lyria-realtime-exp",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "chat-latest",
+   "input": 5.0,
+   "output": 30.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "computer-use-preview",
+   "input": 3.0,
+   "output": 12.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "daybreak-blue-latest",
+   "input": 4.0,
+   "output": 20.0,
+   "cached": 0.4,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "daybreak-red-latest",
+   "input": 12.5,
+   "output": 75.0,
+   "cached": 1.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-3.5-turbo",
+   "input": 3.0,
+   "output": 6.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-3.5-turbo-0125",
+   "input": 3.0,
+   "output": 6.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-3.5-turbo-0613",
+   "input": 3.0,
+   "output": 6.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-3.5-turbo-1106",
+   "input": 3.0,
+   "output": 6.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-4-0613",
+   "input": 30.0,
+   "output": 60.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-4.1-2025-04-14",
+   "input": 3.0,
+   "output": 12.0,
+   "cached": 0.75,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-4.1-mini-2025-04-14",
+   "input": 0.8,
+   "output": 3.2,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-4.1-nano-2025-04-14",
+   "input": 0.2,
+   "output": 0.8,
+   "cached": 0.05,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-4o-2024-08-06",
+   "input": 3.75,
+   "output": 15.0,
+   "cached": 1.875,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-4o-2024-11-20",
+   "input": 3.75,
+   "output": 15.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:gpt-4o-mini-2024-07-18",
+   "input": 0.3,
+   "output": 1.2,
+   "cached": 0.15,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "ft:o4-mini-2025-04-16",
+   "input": 4.0,
+   "output": 16.0,
+   "cached": 1.0,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-3.5-turbo",
+   "input": 0.5,
+   "output": 1.5,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-3.5-turbo-0125",
+   "input": 0.5,
+   "output": 1.5,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-3.5-turbo-1106",
+   "input": 1.0,
+   "output": 2.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-3.5-turbo-16k",
+   "input": 3.0,
+   "output": 4.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4",
+   "input": 30.0,
+   "output": 60.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4-0613",
+   "input": 30.0,
+   "output": 60.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4-1106-preview",
+   "input": 10.0,
+   "output": 30.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4-turbo",
+   "input": 10.0,
+   "output": 30.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4-turbo-2024-04-09",
+   "input": 10.0,
+   "output": 30.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4.1",
+   "input": 2.0,
+   "output": 8.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4.1-2025-04-14",
+   "input": 2.0,
+   "output": 8.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4.1-mini",
+   "input": 0.4,
+   "output": 1.6,
+   "cached": 0.1,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4.1-mini-2025-04-14",
+   "input": 0.4,
+   "output": 1.6,
+   "cached": 0.1,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4.1-nano",
+   "input": 0.1,
+   "output": 0.4,
+   "cached": 0.025,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4.1-nano-2025-04-14",
+   "input": 0.1,
+   "output": 0.4,
+   "cached": 0.025,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": 1.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-2024-05-13",
+   "input": 5.0,
+   "output": 15.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-2024-08-06",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": 1.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-2024-11-20",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": 1.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-audio-preview-2024-12-17",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-audio-preview-2025-06-03",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-mini",
+   "input": 0.15,
+   "output": 0.6,
+   "cached": 0.075,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-mini-2024-07-18",
+   "input": 0.15,
+   "output": 0.6,
+   "cached": 0.075,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-mini-audio-preview-2024-12-17",
+   "input": 0.15,
+   "output": 0.6,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-mini-search-preview",
+   "input": 0.15,
+   "output": 0.6,
+   "cached": 0.075,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-4o-search-preview",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": 1.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-2025-08-07",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-chat",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-chat-latest",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-codex",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-mini",
+   "input": 0.25,
+   "output": 2.0,
+   "cached": 0.025,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-mini-2025-08-07",
+   "input": 0.25,
+   "output": 2.0,
+   "cached": 0.025,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-nano",
+   "input": 0.05,
+   "output": 0.4,
+   "cached": 0.005,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-nano-2025-08-07",
+   "input": 0.05,
+   "output": 0.4,
+   "cached": 0.005,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-pro",
+   "input": 15.0,
+   "output": 120.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-pro-2025-10-06",
+   "input": 15.0,
+   "output": 120.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-search-api",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5-search-api-2025-10-14",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.1",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.1-2025-11-13",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.1-chat-latest",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.1-codex",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.1-codex-max",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.1-codex-mini",
+   "input": 0.25,
+   "output": 2.0,
+   "cached": 0.025,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.2",
+   "input": 1.75,
+   "output": 14.0,
+   "cached": 0.175,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.2-2025-12-11",
+   "input": 1.75,
+   "output": 14.0,
+   "cached": 0.175,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.2-chat-latest",
+   "input": 1.75,
+   "output": 14.0,
+   "cached": 0.175,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.2-codex",
+   "input": 1.75,
+   "output": 14.0,
+   "cached": 0.175,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.2-pro",
+   "input": 21.0,
+   "output": 168.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.2-pro-2025-12-11",
+   "input": 21.0,
+   "output": 168.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.3-chat-latest",
+   "input": 1.75,
+   "output": 14.0,
+   "cached": 0.175,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.3-codex",
+   "input": 1.75,
+   "output": 14.0,
+   "cached": 0.175,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.4",
+   "input": 2.5,
+   "output": 15.0,
+   "cached": 0.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.4-2026-03-05",
+   "input": 2.5,
+   "output": 15.0,
+   "cached": 0.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.4-mini",
+   "input": 0.75,
+   "output": 4.5,
+   "cached": 0.075,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.4-mini-2026-03-17",
+   "input": 0.75,
+   "output": 4.5,
+   "cached": 0.075,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.4-nano",
+   "input": 0.2,
+   "output": 1.25,
+   "cached": 0.02,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.4-nano-2026-03-17",
+   "input": 0.2,
+   "output": 1.25,
+   "cached": 0.02,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.4-pro",
+   "input": 30.0,
+   "output": 180.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.4-pro-2026-03-05",
+   "input": 30.0,
+   "output": 180.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.5",
+   "input": 5.0,
+   "output": 30.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.5-2026-04-23",
+   "input": 5.0,
+   "output": 30.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.5-cyber",
+   "input": 12.5,
+   "output": 75.0,
+   "cached": 1.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.5-pro",
+   "input": 30.0,
+   "output": 180.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.5-pro-2026-04-23",
+   "input": 30.0,
+   "output": 180.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.6",
+   "input": 4.0,
+   "output": 20.0,
+   "cached": 0.4,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.6-cyber",
+   "input": 12.5,
+   "output": 75.0,
+   "cached": 1.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.6-luna",
+   "input": 0.2,
+   "output": 1.2,
+   "cached": 0.02,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.6-sol",
+   "input": 4.0,
+   "output": 20.0,
+   "cached": 0.4,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-5.6-terra",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-6-astra",
+   "input": 10.0,
+   "output": 50.0,
+   "cached": 1.0,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "input": 0.1,
+   "output": 0.5,
+   "cached": 0.01,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-6-sol",
+   "input": 2.0,
+   "output": 10.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-6.1-sol",
+   "input": 2.0,
+   "output": 10.0,
+   "cached": 0.1,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-audio",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-audio-1.5",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-audio-2025-08-28",
+   "input": 2.5,
+   "output": 10.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-audio-mini",
+   "input": 0.6,
+   "output": 2.4,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-audio-mini-2025-12-15",
+   "input": 0.6,
+   "output": 2.4,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-daybreak-blue-latest",
+   "input": 4.0,
+   "output": 20.0,
+   "cached": 0.4,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-daybreak-red-latest",
+   "input": 12.5,
+   "output": 75.0,
+   "cached": 1.25,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-rosalind-discovery",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "gpt-rosalind-research",
+   "input": 5.0,
+   "output": 25.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o1",
+   "input": 15.0,
+   "output": 60.0,
+   "cached": 7.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o1-2024-12-17",
+   "input": 15.0,
+   "output": 60.0,
+   "cached": 7.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o1-pro",
+   "input": 150.0,
+   "output": 600.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o1-pro-2025-03-19",
+   "input": 150.0,
+   "output": 600.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o3",
+   "input": 2.0,
+   "output": 8.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o3-2025-04-16",
+   "input": 2.0,
+   "output": 8.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o3-deep-research",
+   "input": 10.0,
+   "output": 40.0,
+   "cached": 2.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o3-mini",
+   "input": 1.1,
+   "output": 4.4,
+   "cached": 0.55,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o3-mini-2025-01-31",
+   "input": 1.1,
+   "output": 4.4,
+   "cached": 0.55,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o3-pro",
+   "input": 20.0,
+   "output": 80.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o3-pro-2025-06-10",
+   "input": 20.0,
+   "output": 80.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o4-mini",
+   "input": 1.1,
+   "output": 4.4,
+   "cached": 0.275,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o4-mini-2025-04-16",
+   "input": 1.1,
+   "output": 4.4,
+   "cached": 0.275,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "o4-mini-deep-research",
+   "input": 2.0,
+   "output": 8.0,
+   "cached": 0.5,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "text-embedding-3-large",
+   "input": 0.13,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "text-embedding-3-small",
+   "input": 0.02,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "text-embedding-ada-002",
+   "input": 0.1,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "openai",
+   "model": "text-embedding-ada-002-v2",
+   "input": 0.1,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "deep-research-pro-preview-12-2025",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-2.5-computer-use-preview-10-2025",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-2.5-flash",
+   "input": 0.3,
+   "output": 2.5,
+   "cached": 0.03,
+   "thinking": 2.5
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-2.5-flash-lite",
+   "input": 0.1,
+   "output": 0.4,
+   "cached": 0.01,
+   "thinking": 0.4
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-2.5-flash-lite-preview-09-2025",
+   "input": 0.1,
+   "output": 0.4,
+   "cached": 0.01,
+   "thinking": 0.4
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-2.5-flash-preview-09-2025",
+   "input": 0.3,
+   "output": 2.5,
+   "cached": 0.03,
+   "thinking": 2.5
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-2.5-pro",
+   "input": 1.25,
+   "output": 10.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-2.5-pro-preview-tts",
+   "input": 1.0,
+   "output": 20.0,
+   "cached": 0.125,
+   "thinking": null
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3-flash-preview",
+   "input": 0.5,
+   "output": 3.0,
+   "cached": 0.05,
+   "thinking": 3.0
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.1-flash-lite",
+   "input": 0.25,
+   "output": 1.5,
+   "cached": 0.025,
+   "thinking": 1.5
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.1-flash-lite-preview",
+   "input": 0.25,
+   "output": 1.5,
+   "cached": 0.025,
+   "thinking": 1.5
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.1-pro-preview",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.1-pro-preview-customtools",
+   "input": 2.0,
+   "output": 12.0,
+   "cached": 0.2,
+   "thinking": null
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.5-flash",
+   "input": 1.5,
+   "output": 9.0,
+   "cached": 0.15,
+   "thinking": 9.0
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.5-flash-lite",
+   "input": 0.3,
+   "output": 2.5,
+   "cached": 0.03,
+   "thinking": 2.5
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.6-flash",
+   "input": 0.75,
+   "output": 3.75,
+   "cached": 0.075,
+   "thinking": 3.75
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.7-flash",
+   "input": 0.75,
+   "output": 3.75,
+   "cached": 0.075,
+   "thinking": 3.75
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.8-flash",
+   "input": 0.75,
+   "output": 3.75,
+   "cached": 0.075,
+   "thinking": 3.75
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-3.8-flash-cyber",
+   "input": 1.5,
+   "output": 7.5,
+   "cached": 0.15,
+   "thinking": 7.5
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-flash-experimental",
+   "input": 0.0,
+   "output": 0.0,
+   "cached": null,
+   "thinking": null
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-omni-flash-preview",
+   "input": 1.5,
+   "output": 9.0,
+   "cached": null,
+   "thinking": 9.0
+  },
+  {
+   "provider": "vertex_ai",
+   "model": "gemini-robotics-er-1.5-preview",
+   "input": 0.3,
+   "output": 2.5,
+   "cached": 0.0,
+   "thinking": 2.5
+  }
+ ]
+}
